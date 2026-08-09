@@ -2,6 +2,7 @@ const Roadmap = require("../models/Roadmap.model");
 const Phase = require("../models/Phase.model");
 const Milestone = require("../models/Milestone.model");
 const roadmapGenerator = require("../services/roadmapGenerator.service");
+const progressService = require("../services/progress.service");
 const AppError = require("../utils/appError");
 
 exports.createRoadmap = async (req, res, next) => {
@@ -54,30 +55,23 @@ exports.getRoadmapDetails = async (req, res, next) => {
       _id: req.params.id,
       user: req.user._id,
     });
-
-    if (!roadmap) {
+    if (!roadmap)
       return next(new AppError("No roadmap found with that ID", 404));
-    }
 
-    // Fetch phases and milestones for progressive disclosure
     const phases = await Phase.find({ roadmap: roadmap._id })
       .sort("order")
       .lean();
-
-    // Attach milestones to each phase
     for (let phase of phases) {
-      const milestones = await Milestone.find({ phase: phase._id })
+      phase.milestones = await Milestone.find({ phase: phase._id })
         .sort("order")
         .lean();
-      phase.milestones = milestones;
     }
+
+    const progress = await progressService.getRoadmapProgress(roadmap._id);
 
     res.status(200).json({
       status: "success",
-      data: {
-        roadmap,
-        phases,
-      },
+      data: { roadmap, phases, progress },
     });
   } catch (error) {
     next(error);
