@@ -40,7 +40,14 @@ exports.updateMilestone = async (req, res, next) => {
 
     res.status(200).json({
       status: "success",
-      data: { milestone, progress },
+      data: {
+        milestone,
+        progress,
+        streak: {
+          currentStreak: req.user.currentStreak,
+          longestStreak: req.user.longestStreak,
+        },
+      },
     });
   } catch (error) {
     next(error);
