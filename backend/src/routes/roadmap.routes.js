@@ -25,4 +25,5 @@ router.patch(
   roadmapLimiter,
   roadmapController.regeneratePhase,
 );
+router.get("/:id/next", roadmapController.getNextTask);
 module.exports = router;

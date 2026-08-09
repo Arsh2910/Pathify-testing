@@ -94,3 +94,38 @@ exports.regeneratePhase = async (req, res, next) => {
     );
   }
 };
+exports.getNextTask = async (req, res, next) => {
+  try {
+    const roadmap = await Roadmap.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+    if (!roadmap)
+      return next(new AppError("No roadmap found with that ID", 404));
+
+    const phases = await Phase.find({ roadmap: roadmap._id })
+      .sort("order")
+      .select("_id order");
+    const phaseIds = phases.map((p) => p._id);
+
+    const nextMilestone = await Milestone.findOne({
+      phase: { $in: phaseIds },
+      isCompleted: false,
+    })
+      .sort("order")
+      .populate("phase", "title order");
+
+    if (!nextMilestone) {
+      return res.status(200).json({
+        status: "success",
+        data: { milestone: null, message: "All milestones completed! 🎉" },
+      });
+    }
+
+    res
+      .status(200)
+      .json({ status: "success", data: { milestone: nextMilestone } });
+  } catch (error) {
+    next(error);
+  }
+};
