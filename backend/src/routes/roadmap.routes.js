@@ -26,4 +26,6 @@ router.patch(
   roadmapController.regeneratePhase,
 );
 router.get("/:id/next", roadmapController.getNextTask);
+router.patch("/:id/abandon", roadmapController.abandonRoadmap);
+router.delete("/:id", roadmapController.deleteRoadmap);
 module.exports = router;

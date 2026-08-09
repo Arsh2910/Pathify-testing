@@ -129,3 +129,42 @@ exports.getNextTask = async (req, res, next) => {
     next(error);
   }
 };
+exports.abandonRoadmap = async (req, res, next) => {
+  try {
+    const roadmap = await Roadmap.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+    if (!roadmap)
+      return next(new AppError("No roadmap found with that ID", 404));
+
+    roadmap.status = "abandoned";
+    await roadmap.save();
+
+    res.status(200).json({ status: "success", data: { roadmap } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.deleteRoadmap = async (req, res, next) => {
+  try {
+    const roadmap = await Roadmap.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+    if (!roadmap)
+      return next(new AppError("No roadmap found with that ID", 404));
+
+    const phases = await Phase.find({ roadmap: roadmap._id }).select("_id");
+    const phaseIds = phases.map((p) => p._id);
+
+    await Milestone.deleteMany({ phase: { $in: phaseIds } });
+    await Phase.deleteMany({ roadmap: roadmap._id });
+    await Roadmap.deleteOne({ _id: roadmap._id });
+
+    res.status(204).json({ status: "success", data: null });
+  } catch (error) {
+    next(error);
+  }
+};
