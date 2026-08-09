@@ -77,3 +77,20 @@ exports.getRoadmapDetails = async (req, res, next) => {
     next(error);
   }
 };
+exports.regeneratePhase = async (req, res, next) => {
+  try {
+    const { id: roadmapId, phaseId } = req.params;
+    const milestones = await roadmapGenerator.regeneratePhase(
+      phaseId,
+      roadmapId,
+      req.user._id,
+    );
+    res.status(200).json({ status: "success", data: { milestones } });
+  } catch (error) {
+    next(
+      error instanceof AppError
+        ? error
+        : new AppError("Failed to regenerate phase: " + error.message, 500),
+    );
+  }
+};
