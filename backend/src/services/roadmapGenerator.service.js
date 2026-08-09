@@ -1,8 +1,8 @@
-const Roadmap = require('../models/Roadmap.model');
-const Phase = require('../models/Phase.model');
-const Milestone = require('../models/Milestone.model');
-const templateService = require('./template.service');
-const aiService = require('./ai.service');
+const Roadmap = require("../models/Roadmap.model");
+const Phase = require("../models/Phase.model");
+const Milestone = require("../models/Milestone.model");
+const templateService = require("./template.service");
+const aiService = require("./ai.service");
 
 exports.createRoadmap = async (userId, goal, timeframe, userPreferences) => {
   // 1. Create Roadmap entry (status: generating)
@@ -10,7 +10,7 @@ exports.createRoadmap = async (userId, goal, timeframe, userPreferences) => {
     user: userId,
     goal,
     targetTimeframe: timeframe,
-    status: 'generating'
+    status: "generating",
   });
 
   try {
@@ -33,7 +33,7 @@ exports.createRoadmap = async (userId, goal, timeframe, userPreferences) => {
         pTemplate.title,
         goal,
         userPreferences,
-        timeframe
+        timeframe,
       );
 
       // Save Milestones to DB
@@ -47,14 +47,17 @@ exports.createRoadmap = async (userId, goal, timeframe, userPreferences) => {
     }
 
     // 4. Update Roadmap status to active
-    roadmap.status = 'active';
+    roadmap.status = "active";
     await roadmap.save();
 
     return roadmap;
   } catch (error) {
     console.error("Error during roadmap generation:", error);
-    roadmap.status = 'abandoned';
+    const phases = await Phase.find({ roadmap: roadmap._id });
+    await Milestone.deleteMany({ phase: { $in: phases.map((p) => p._id) } });
+    await Phase.deleteMany({ roadmap: roadmap._id });
+    roadmap.status = "abandoned";
     await roadmap.save();
-    throw error; // Re-throw to be handled by controller
+    throw error;
   }
 };
