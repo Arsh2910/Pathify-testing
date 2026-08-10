@@ -15,8 +15,12 @@ const app = express();
 app.use(helmet());
 
 // Enable CORS
-app.use(cors());
-
+app.use(
+  cors({
+    origin: "https://trailhead-rlls.onrender.com",
+    credentials: true,
+  }),
+);
 // Body parser
 app.use(express.json({ limit: "10kb" }));
 
