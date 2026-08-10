@@ -15,10 +15,9 @@ const app = express();
 app.use(helmet());
 
 // Enable CORS
-app.use(
+aapp.use(
   cors({
-    origin: "https://trailhead-rlls.onrender.com",
-    credentials: true,
+    origin: "https://trail-head-six.vercel.app",
   }),
 );
 // Body parser
