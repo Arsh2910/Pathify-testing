@@ -13,7 +13,7 @@ const roadmapSchema = new mongoose.Schema(
       trim: true,
     },
     targetTimeframe: {
-      type: String, // e.g., "3 months", "6 weeks"
+      type: String,
       required: [true, "Target timeframe is required"],
     },
     status: {
@@ -22,9 +22,6 @@ const roadmapSchema = new mongoose.Schema(
       default: "active",
     },
   },
-  roadmapSchema.virtual("completionStats").get(function () {
-    return this._completionStats || null;
-  }),
   { timestamps: true },
 );
 

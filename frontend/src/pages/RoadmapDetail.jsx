@@ -1,137 +1,199 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Loader2, ArrowLeft, Trophy } from "lucide-react";
-import apiClient from "../api/apiClient";
-import useStore from "../store/useStore";
-import PhaseAccordion from "../components/roadmap/PhaseAccordion";
-import NextTaskCard from "../components/roadmap/NextTaskCard";
-import "./RoadmapDetail.css";
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import useRoadmapStore from '../store/roadmapStore';
+import useAuthStore from '../store/authStore';
+import PhaseAccordion from '../components/PhaseAccordion';
+import NextTaskCard from '../components/NextTaskCard';
 
-const RoadmapDetail = () => {
+export default function RoadmapDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const {
-    currentRoadmap,
-    setCurrentRoadmap,
-    roadmapProgress,
-    setRoadmapProgress,
-  } = useStore();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+    currentRoadmap, phases, progress, nextTask,
+    fetchRoadmapDetail, fetchNextTask, completeMilestone,
+    abandonRoadmap, deleteRoadmap, loading, error,
+  } = useRoadmapStore();
+  const { updateStreak } = useAuthStore();
+  const [actionLoading, setActionLoading] = useState('');
 
   useEffect(() => {
-    const fetchRoadmap = async () => {
-      try {
-        const response = await apiClient.get(`/roadmaps/${id}`);
-        const fullRoadmap = {
-          ...response.data.data.roadmap,
-          phases: response.data.data.phases,
-        };
-        setCurrentRoadmap(fullRoadmap);
-        setRoadmapProgress(response.data.data.progress);
-      } catch (err) {
-        setError("Failed to load roadmap.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRoadmap();
+    fetchRoadmapDetail(id);
+    fetchNextTask(id);
+  }, [id]);
 
-    return () => setCurrentRoadmap(null);
-  }, [id, setCurrentRoadmap, setRoadmapProgress]);
+  const handleCompleteNextTask = async (milestoneId) => {
+    try {
+      const { streak } = await completeMilestone(milestoneId, true);
+      if (streak) updateStreak(streak);
+      fetchNextTask(id);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to complete milestone');
+    }
+  };
 
-  if (loading)
+  const handleAbandon = async () => {
+    if (!window.confirm('Abandon this roadmap?')) return;
+    setActionLoading('abandon');
+    try { await abandonRoadmap(id); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to abandon roadmap'); }
+    finally { setActionLoading(''); }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Permanently delete this roadmap? This cannot be undone.')) return;
+    setActionLoading('delete');
+    try { await deleteRoadmap(id); navigate('/'); }
+    catch (err) { alert(err.response?.data?.message || 'Failed to delete roadmap'); setActionLoading(''); }
+  };
+
+  if (loading && !currentRoadmap) {
     return (
-      <div className="dashboard-loading">
-        <Loader2 className="spinner" size={40} />
+      <div className="page-bg min-h-screen flex items-center justify-center pt-20">
+        <span className="material-symbols-outlined animate-spin-glow" style={{ color: 'var(--th-primary-container)', fontSize: '28px' }}>refresh</span>
+        <span style={{ fontFamily: 'Hanken Grotesk', color: 'var(--th-muted)', fontSize: '16px', marginLeft: '12px' }}>Loading roadmap…</span>
       </div>
     );
-  if (error || !currentRoadmap)
+  }
+
+  if (error) {
     return (
-      <div className="alert alert-error">{error || "Roadmap not found"}</div>
+      <div className="page-bg min-h-screen flex items-center justify-center pt-20 px-4">
+        <div className="text-center">
+          <span className="material-symbols-outlined" style={{ color: 'var(--th-error)', fontSize: '48px', display: 'block', marginBottom: '16px' }}>error</span>
+          <p style={{ fontFamily: 'Manrope', fontWeight: 600, fontSize: '20px', color: 'var(--th-on-surface)', marginBottom: '8px' }}>Failed to load roadmap</p>
+          <p style={{ fontFamily: 'Hanken Grotesk', color: 'var(--th-muted)', marginBottom: '24px' }}>{error}</p>
+          <Link to="/" className="btn-ghost">Back to Dashboard</Link>
+        </div>
+      </div>
     );
-
-  // Prefer server-computed progress; fall back to client calc if not yet loaded
-  let progressPercent = roadmapProgress?.percentage;
-  if (progressPercent === undefined) {
-    let total = 0,
-      completed = 0;
-    currentRoadmap.phases.forEach((phase) => {
-      phase.milestones.forEach((m) => {
-        total++;
-        if (m.isCompleted) completed++;
-      });
-    });
-    progressPercent = total === 0 ? 0 : Math.round((completed / total) * 100);
   }
-  const isFullyCompleted = progressPercent === 100;
 
-  let activePhaseId = null;
-  for (const phase of currentRoadmap.phases) {
-    const isPhaseComplete = phase.milestones.every((m) => m.isCompleted);
-    if (!isPhaseComplete && phase.milestones.length > 0) {
-      activePhaseId = phase._id;
-      break;
-    }
-  }
+  if (!currentRoadmap) return null;
+
+  const totalMilestones = progress?.total || 0;
+  const completedMilestones = progress?.completed || 0;
+  const progressPercent = totalMilestones > 0
+    ? Math.round((completedMilestones / totalMilestones) * 100)
+    : 0;
+  const isAbandoned  = currentRoadmap.status === 'abandoned';
+  const isGenerating = currentRoadmap.status === 'generating';
 
   return (
-    <div className="roadmap-detail-container animate-fade-in">
-      <div className="roadmap-header">
-        <Link to="/dashboard" className="back-link">
-          <ArrowLeft size={16} /> Back to Dashboard
-        </Link>
-        <h1 className="roadmap-title">{currentRoadmap.goal}</h1>
-        <p className="roadmap-timeframe">
-          Target: {currentRoadmap.targetTimeframe}
-        </p>
+    <div className="page-bg min-h-screen pt-24 pb-16 px-4 md:px-12 animate-fade-in" style={{ maxWidth: '1280px', margin: '0 auto' }}>
 
-        <div className="progress-container mt-4">
-          <div className="flex justify-between mb-2">
-            <span className="text-secondary font-500">Overall Progress</span>
-            <span className="font-500">{progressPercent}%</span>
+      {/* Back */}
+      <Link to="/" className="inline-flex items-center gap-2 mb-8 transition-colors duration-200"
+        style={{ color: 'var(--th-on-surface-variant)', textDecoration: 'none', fontFamily: 'Hanken Grotesk', fontSize: '13px', fontWeight: 600, letterSpacing: '0.04em' }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--th-primary-container)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--th-on-surface-variant)'}
+      >
+        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+        BACK TO DASHBOARD
+      </Link>
+
+      {/* Header */}
+      <header className="mb-10">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3">
+              <span className={`pill-${currentRoadmap.status}`}>{currentRoadmap.status}</span>
+              {currentRoadmap.targetTimeframe && (
+                <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '12px', color: 'var(--th-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>schedule</span>
+                  {currentRoadmap.targetTimeframe}
+                </span>
+              )}
+            </div>
+            <h1 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: 'clamp(22px, 4vw, 36px)', color: 'var(--th-on-surface)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              {currentRoadmap.goal}
+            </h1>
           </div>
-          <div className="progress-bar-bg">
-            <div
-              className="progress-bar-fill"
-              style={{ width: `${progressPercent}%` }}
-            ></div>
+
+          {!isGenerating && (
+            <div className="flex gap-3 flex-shrink-0">
+              {currentRoadmap.status === 'active' && (
+                <button onClick={handleAbandon} className="btn-ghost py-2 px-4 text-sm" disabled={actionLoading === 'abandon'}>
+                  {actionLoading === 'abandon'
+                    ? <span className="material-symbols-outlined animate-spin-glow" style={{ fontSize: '16px' }}>refresh</span>
+                    : <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>pause_circle</span>}
+                  Abandon
+                </button>
+              )}
+              <button onClick={handleDelete} className="btn-danger py-2 px-4 text-sm" disabled={actionLoading === 'delete'}>
+                {actionLoading === 'delete'
+                  ? <span className="material-symbols-outlined animate-spin-glow" style={{ fontSize: '16px' }}>refresh</span>
+                  : <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>delete</span>}
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Generating banner */}
+      {isGenerating && (
+        <div className="mb-8 p-5 rounded-xl flex items-center gap-3"
+          style={{ background: 'color-mix(in srgb, var(--th-secondary) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--th-secondary) 25%, transparent)' }}>
+          <span className="material-symbols-outlined animate-spin-glow" style={{ color: 'var(--th-secondary)', fontSize: '22px' }}>autorenew</span>
+          <div>
+            <p style={{ fontFamily: 'Manrope', fontWeight: 600, fontSize: '15px', color: 'var(--th-secondary)' }}>Still generating your roadmap…</p>
+            <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', color: 'var(--th-on-surface-variant)', marginTop: '4px' }}>Milestones will appear here once generation completes.</p>
           </div>
         </div>
+      )}
 
-        {isFullyCompleted && (
-          <div className="completion-banner mt-4 animate-fade-in">
-            <Trophy size={24} className="trophy-icon" />
-            <div>
-              <h3>Incredible work!</h3>
-              <p>You have completed this entire roadmap.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        {/* Sidebar */}
+        <aside className="lg:col-span-4 flex flex-col gap-5">
+          {/* Progress */}
+          <div className="card-flat" style={{ padding: '1.5rem' }}>
+            <div className="flex justify-between items-baseline mb-4">
+              <h2 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600, fontSize: '17px', color: 'var(--th-on-surface)' }}>
+                Overall Progress
+              </h2>
+              <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: '30px', color: 'var(--th-primary-container)' }}>
+                {progressPercent}%
+              </span>
             </div>
+            <div className="progress-track mb-2">
+              <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+            </div>
+            <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '12px', color: 'var(--th-muted)', textAlign: 'right' }}>
+              {completedMilestones} / {totalMilestones} Milestones
+            </p>
           </div>
-        )}
-      </div>
 
-      {!isFullyCompleted && <NextTaskCard roadmapId={id} />}
+          {/* Next Task */}
+          {!isAbandoned && !isGenerating && (
+            <NextTaskCard milestone={nextTask} onComplete={nextTask ? handleCompleteNextTask : null} />
+          )}
+        </aside>
 
-      <div className="phases-container mt-4">
-        {currentRoadmap.phases.map((phase, index) => {
-          const isPhaseComplete =
-            phase.milestones.every((m) => m.isCompleted) &&
-            phase.milestones.length > 0;
-          let status = "locked";
-          if (isPhaseComplete) status = "completed";
-          else if (phase._id === activePhaseId) status = "active";
+        {/* Phases */}
+        <main className="lg:col-span-8">
+          <div className="flex items-center justify-between mb-5">
+            <h2 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600, fontSize: '20px', color: 'var(--th-on-surface)' }}>
+              Learning Phases
+            </h2>
+            <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', color: 'var(--th-muted)' }}>
+              {phases.length} phase{phases.length !== 1 ? 's' : ''}
+            </span>
+          </div>
 
-          return (
-            <PhaseAccordion
-              key={phase._id}
-              phase={phase}
-              status={status}
-              phaseNumber={index + 1}
-            />
-          );
-        })}
+          {phases.length === 0 && !isGenerating && (
+            <div className="flex flex-col items-center justify-center py-16 rounded-xl"
+              style={{ border: '2px dashed var(--th-outline-variant)' }}>
+              <span className="material-symbols-outlined" style={{ color: 'var(--th-outline-variant)', fontSize: '40px', marginBottom: '12px' }}>route</span>
+              <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '15px', color: 'var(--th-muted)' }}>No phases found for this roadmap.</p>
+            </div>
+          )}
+
+          {phases.map((phase, index) => (
+            <PhaseAccordion key={phase._id} phase={phase} roadmapId={id} phaseIndex={index} />
+          ))}
+        </main>
       </div>
     </div>
   );
-};
-
-export default RoadmapDetail;
+}

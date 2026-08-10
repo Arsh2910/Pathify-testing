@@ -7,25 +7,27 @@ const AppError = require("../utils/appError");
 
 exports.createRoadmap = async (req, res, next) => {
   try {
-    const { goal, targetTimeframe } = req.body;
-    const userPreferences = {
-      skillLevel: req.user.skillLevel,
-      hoursPerDay: req.user.hoursPerDay,
-    };
+    const { goal, targetTimeframe, skillLevel, hoursPerDay } = req.body;
 
     const roadmap = await Roadmap.create({
       user: req.user._id,
       goal,
       targetTimeframe,
+      skillLevel,
+      hoursPerDay,
       status: "generating",
     });
 
-    // fire-and-forget — don't await
+    const userPreferences = { skillLevel, hoursPerDay };
+
     roadmapGenerator
       .populateRoadmap(roadmap._id, goal, targetTimeframe, userPreferences)
       .catch((err) => console.error("Background generation failed:", err));
 
-    res.status(202).json({ status: "success", data: { roadmap } });
+    res.status(202).json({
+      status: "success",
+      data: { roadmap },
+    });
   } catch (error) {
     next(error);
   }
@@ -77,22 +79,41 @@ exports.getRoadmapDetails = async (req, res, next) => {
     next(error);
   }
 };
-exports.regeneratePhase = async (req, res, next) => {
-  try {
-    const { id: roadmapId, phaseId } = req.params;
-    const milestones = await roadmapGenerator.regeneratePhase(
-      phaseId,
-      roadmapId,
-      req.user._id,
-    );
-    res.status(200).json({ status: "success", data: { milestones } });
-  } catch (error) {
-    next(
-      error instanceof AppError
-        ? error
-        : new AppError("Failed to regenerate phase: " + error.message, 500),
-    );
-  }
+exports.regeneratePhase = async (phaseId, roadmapId, userId) => {
+  const roadmap = await Roadmap.findOne({ _id: roadmapId, user: userId });
+  if (!roadmap) throw new AppError("Roadmap not found", 404);
+
+  const phase = await Phase.findOne({ _id: phaseId, roadmap: roadmapId });
+  if (!phase) throw new AppError("Phase not found", 404);
+
+  const userPreferences = {
+    skillLevel: roadmap.skillLevel,
+    hoursPerDay: roadmap.hoursPerDay,
+  };
+
+  await Milestone.deleteMany({ phase: phase._id });
+
+  const milestonesData = await aiService.generateMilestonesForPhase(
+    phase.title,
+    roadmap.goal,
+    userPreferences,
+    roadmap.targetTimeframe,
+  );
+
+  const existingMax = await Milestone.findOne({})
+    .sort("-order")
+    .select("order");
+  let order = (existingMax?.order || 0) + 1;
+
+  const milestonesToInsert = milestonesData.map((m) => ({
+    ...m,
+    phase: phase._id,
+    order: order++,
+  }));
+
+  await Milestone.insertMany(milestonesToInsert);
+
+  return Milestone.find({ phase: phase._id }).sort("order");
 };
 exports.getNextTask = async (req, res, next) => {
   try {

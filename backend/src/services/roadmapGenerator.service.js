@@ -1,35 +1,32 @@
-const AppError = require("../utils/appError");
 const Roadmap = require("../models/Roadmap.model");
 const Phase = require("../models/Phase.model");
 const Milestone = require("../models/Milestone.model");
 const templateService = require("./template.service");
 const aiService = require("./ai.service");
 
-exports.createRoadmap = async (userId, goal, timeframe, userPreferences) => {
-  // 1. Create Roadmap entry (status: generating)
-  const roadmap = await Roadmap.create({
-    user: userId,
-    goal,
-    targetTimeframe: timeframe,
-    status: "generating",
-  });
+// Populates an already-created roadmap with phases + AI-generated milestones.
+// Runs in the background — does NOT create the Roadmap doc itself.
+exports.populateRoadmap = async (
+  roadmapId,
+  goal,
+  timeframe,
+  userPreferences,
+) => {
+  const roadmap = await Roadmap.findById(roadmapId);
+  if (!roadmap)
+    throw new Error(`Roadmap ${roadmapId} not found during population`);
 
   try {
-    // 2. Get structural templates
     const phaseTemplates = templateService.getPhaseTemplates(goal);
-
-    // 3. For each phase, call AI and save
     let globalMilestoneOrder = 1;
 
     for (const pTemplate of phaseTemplates) {
-      // Save Phase to DB
       const phase = await Phase.create({
         roadmap: roadmap._id,
         title: pTemplate.title,
         order: pTemplate.order,
       });
 
-      // Call AI to get milestones for this phase
       const milestonesData = await aiService.generateMilestonesForPhase(
         pTemplate.title,
         goal,
@@ -37,8 +34,7 @@ exports.createRoadmap = async (userId, goal, timeframe, userPreferences) => {
         timeframe,
       );
 
-      // Save Milestones to DB
-      const milestonesToInsert = milestonesData.map((m, index) => ({
+      const milestonesToInsert = milestonesData.map((m) => ({
         ...m,
         phase: phase._id,
         order: globalMilestoneOrder++,
@@ -47,21 +43,59 @@ exports.createRoadmap = async (userId, goal, timeframe, userPreferences) => {
       await Milestone.insertMany(milestonesToInsert);
     }
 
-    // 4. Update Roadmap status to active
     roadmap.status = "active";
     await roadmap.save();
-
     return roadmap;
   } catch (error) {
     console.error("Error during roadmap generation:", error);
+
+    // Clean up any partially-created phases/milestones
     const phases = await Phase.find({ roadmap: roadmap._id });
-    await Milestone.deleteMany({ phase: { $in: phases.map((p) => p._id) } });
+    const phaseIds = phases.map((p) => p._id);
+    await Milestone.deleteMany({ phase: { $in: phaseIds } });
     await Phase.deleteMany({ roadmap: roadmap._id });
+
     roadmap.status = "abandoned";
     await roadmap.save();
     throw error;
   }
 };
+
+// Kept for backward compatibility / synchronous use elsewhere (e.g. tests).
+// Creates the roadmap AND awaits full population — original blocking behavior.
+exports.createRoadmap = async (req, res, next) => {
+  try {
+    const { goal, targetTimeframe } = req.body;
+    const userPreferences = {
+      skillLevel: req.user.skillLevel,
+      hoursPerDay: req.user.hoursPerDay,
+    };
+
+    const roadmap = await Roadmap.create({
+      user: req.user._id,
+      goal,
+      targetTimeframe,
+      status: "generating",
+    });
+
+    // fire-and-forget — don't await
+    roadmapGenerator
+      .populateRoadmap(roadmap._id, goal, targetTimeframe, userPreferences)
+      .catch((err) => console.error("Background generation failed:", err));
+
+    res.status(202).json({
+      status: "success",
+      data: { roadmap },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// --- Tier 1 addition: regenerate a single phase ---
+const AppError = require("../utils/appError");
+const User = require("../models/User.model");
+
 exports.regeneratePhase = async (phaseId, roadmapId, userId) => {
   const roadmap = await Roadmap.findOne({ _id: roadmapId, user: userId });
   if (!roadmap) throw new AppError("Roadmap not found", 404);
@@ -69,13 +103,12 @@ exports.regeneratePhase = async (phaseId, roadmapId, userId) => {
   const phase = await Phase.findOne({ _id: phaseId, roadmap: roadmapId });
   if (!phase) throw new AppError("Phase not found", 404);
 
-  const user = await require("../models/User.model").findById(userId);
+  const user = await User.findById(userId);
   const userPreferences = {
     skillLevel: user.skillLevel,
     hoursPerDay: user.hoursPerDay,
   };
 
-  // Remove old milestones for this phase
   await Milestone.deleteMany({ phase: phase._id });
 
   const milestonesData = await aiService.generateMilestonesForPhase(
@@ -85,7 +118,6 @@ exports.regeneratePhase = async (phaseId, roadmapId, userId) => {
     roadmap.targetTimeframe,
   );
 
-  // Preserve ordering relative to other phases — reuse the phase's existing milestone order range
   const existingMax = await Milestone.findOne({})
     .sort("-order")
     .select("order");

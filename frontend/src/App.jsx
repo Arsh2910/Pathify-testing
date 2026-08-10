@@ -1,51 +1,63 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Navbar from './components/layout/Navbar';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import IntakeForm from './pages/IntakeForm';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
+import IntakeForm from './pages/IntakeForm';
+import LoadingScreen from './pages/LoadingScreen';
 import RoadmapDetail from './pages/RoadmapDetail';
-import useStore from './store/useStore';
+import useAuthStore from './store/authStore';
 
-// Protected Route Wrapper
-const ProtectedRoute = ({ children }) => {
-  const user = useStore(state => state.user);
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+function ProtectedRoute({ children }) {
+  const { isAuthenticated } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return children;
-};
-
-function App() {
-  return (
-    <Router>
-      <div className="app-container">
-        <Navbar />
-        <main className="main-content">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            <Route path="/" element={
-              <ProtectedRoute>
-                <IntakeForm />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/roadmap/:id" element={
-              <ProtectedRoute>
-                <RoadmapDetail />
-              </ProtectedRoute>
-            } />
-          </Routes>
-        </main>
-      </div>
-    </Router>
-  );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Navbar />
+      <Routes>
+        {/* Public */}
+        <Route path="/login" element={<AuthPage />} />
+
+        {/* Protected */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/new"
+          element={
+            <ProtectedRoute>
+              <IntakeForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/roadmaps/:id/loading"
+          element={
+            <ProtectedRoute>
+              <LoadingScreen />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/roadmaps/:id"
+          element={
+            <ProtectedRoute>
+              <RoadmapDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
