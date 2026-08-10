@@ -15,7 +15,7 @@ const app = express();
 app.use(helmet());
 
 // Enable CORS
-aapp.use(
+app.use(
   cors({
     origin: "https://trail-head-six.vercel.app",
   }),
