@@ -16,17 +16,7 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       select: false,
     },
-    skillLevel: {
-      type: String,
-      enum: ["beginner", "intermediate", "advanced"],
-      default: "beginner",
-    },
-    hoursPerDay: {
-      type: Number,
-      default: 1,
-      min: 0.5,
-      max: 24,
-    },
+
     currentStreak: {
       type: Number,
       default: 0,

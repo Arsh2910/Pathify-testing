@@ -25,7 +25,7 @@ const createSendToken = (user, statusCode, res) => {
 
 exports.register = async (req, res, next) => {
   try {
-    const { email, password, skillLevel, hoursPerDay } = req.body;
+    const { email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -35,8 +35,6 @@ exports.register = async (req, res, next) => {
     const newUser = await User.create({
       email,
       password,
-      skillLevel,
-      hoursPerDay,
     });
 
     createSendToken(newUser, 201, res);

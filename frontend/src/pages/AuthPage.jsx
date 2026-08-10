@@ -12,8 +12,7 @@ export default function AuthPage() {
 
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regSkillLevel, setRegSkillLevel] = useState('beginner');
-  const [regHoursPerDay, setRegHoursPerDay] = useState(1);
+
 
   const { login, register } = useAuthStore();
   const navigate = useNavigate();
@@ -37,7 +36,7 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      await register(regEmail, regPassword, regSkillLevel, Number(regHoursPerDay));
+      await register(regEmail, regPassword);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -166,25 +165,7 @@ export default function AuthPage() {
                 <input type="password" className="input-field" placeholder="••••••••"
                   value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block mb-1.5" style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', fontWeight: 600, color: 'var(--th-on-surface)' }}>
-                    Skill Level
-                  </label>
-                  <select className="input-field" value={regSkillLevel} onChange={(e) => setRegSkillLevel(e.target.value)}>
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1.5" style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', fontWeight: 600, color: 'var(--th-on-surface)' }}>
-                    Hours / Day
-                  </label>
-                  <input type="number" className="input-field" min="0.5" max="24" step="0.5"
-                    value={regHoursPerDay} onChange={(e) => setRegHoursPerDay(e.target.value)} required />
-                </div>
-              </div>
+
               <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
                 {loading ? (
                   <><span className="material-symbols-outlined animate-spin-glow" style={{ fontSize: '18px' }}>refresh</span> Creating account...</>

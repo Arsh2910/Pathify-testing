@@ -18,12 +18,10 @@ const useAuthStore = create((set) => ({
     return data.user;
   },
 
-  register: async (email, password, skillLevel, hoursPerDay) => {
+  register: async (email, password) => {
     const res = await axiosClient.post('/auth/register', {
       email,
       password,
-      skillLevel,
-      hoursPerDay,
     });
     const { token, data } = res.data;
     localStorage.setItem('trailhead_token', token);
