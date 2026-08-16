@@ -73,7 +73,15 @@ User Available Time: ${hoursPerDay} hours/day
 
 The specific Phase we are focusing on is: "${phaseTitle}"
 
-Generate a list of sequential milestones (tasks/topics to learn) specifically for this Phase. Ensure they fit the user's available time and skill level. For each milestone, include 1-3 highly relevant learning resources (fake links like https://example.com/topic are okay if you don't know a real one, but real ones are preferred).
+Generate a list of sequential milestones (tasks/topics to learn) specifically for this Phase. Ensure they fit the user's available time and skill level.
+
+RESOURCE RULES (strict):
+- Only include a resource if you are highly confident it is a real, currently existing page (e.g. official docs like developer.mozilla.org/reactjs.org, well-known platforms like freeCodeCamp, Coursera, YouTube channels/courses you are confident exist).
+- NEVER invent or guess a URL. Do not fabricate plausible-looking links.
+- If you are not confident a specific URL is real, either:
+  (a) link to the resource's known homepage/search page instead (e.g. "https://www.youtube.com/results?search_query=react+hooks+tutorial"), or
+  (b) omit the resource entirely.
+- It is better to return fewer resources, or an empty resources array, than to include an unverified link.
 `;
 
   try {
