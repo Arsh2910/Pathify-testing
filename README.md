@@ -10,7 +10,7 @@ Built as a final year major project.
 
 ## How it works
 
-1. You enter a learning goal (e.g. *"learn Python"*), a target timeframe, your skill level, and how many hours per day you can commit.
+1. You enter a learning goal (e.g. _"learn Python"_), a target timeframe, your skill level, and how many hours per day you can commit.
 2. Trailhead picks a structural template for your goal (coding, language learning, or a general fallback) and personalizes it phase by phase using Google's Gemini AI.
 3. Each phase is broken into milestones — with a description, a **micro first step** (the smallest possible action to beat activation-energy procrastination), a **"why now"** motivational line, a time estimate, and relevant resources (videos, articles, courses).
 4. You check milestones off as you complete them, track your overall progress, and build a daily streak.
@@ -20,7 +20,8 @@ Built as a final year major project.
 ## Tech stack
 
 **Backend**
-- Node.js / Express
+
+- Node.js / Express (TypeScript)
 - MongoDB + Mongoose
 - JWT authentication, bcrypt password hashing
 - Joi request validation
@@ -28,6 +29,7 @@ Built as a final year major project.
 - `helmet`, `cors`, `express-rate-limit` for security/abuse protection
 
 **Frontend**
+
 - React + Vite
 - Zustand for state management
 - React Router
@@ -36,6 +38,7 @@ Built as a final year major project.
 - lucide-react icons
 
 **Hosting**
+
 - Backend: [Render](https://render.com)
 - Frontend: [Vercel](https://vercel.com)
 - Database: [MongoDB Atlas](https://www.mongodb.com/atlas)
@@ -48,8 +51,8 @@ Built as a final year major project.
 trailhead/
 ├── backend/
 │   └── src/
-│       ├── server.js              # entry point
-│       ├── app.js                 # Express app setup
+│       ├── server.ts              # entry point
+│       ├── app.ts                 # Express app setup
 │       ├── models/                # Mongoose schemas (User, Roadmap, Phase, Milestone)
 │       ├── controllers/           # route handlers
 │       ├── routes/                # route definitions
@@ -83,6 +86,7 @@ Skill level and hours-per-day are captured **per roadmap**, not fixed at signup 
 ## Getting started (local development)
 
 ### Prerequisites
+
 - Node.js 18+
 - A MongoDB connection string (local or [Atlas](https://www.mongodb.com/atlas))
 - A [Gemini API key](https://ai.google.dev/)
@@ -94,7 +98,7 @@ cd backend
 npm install
 ```
 
-Create a `.env` file in `backend/`:
+Create a `.env` file in the `backend/` directory:
 
 ```env
 MONGODB_URI=your_mongodb_connection_string
@@ -107,9 +111,7 @@ PORT=5000
 Run it:
 
 ```bash
-node src/server.js
-# or, with auto-restart on changes:
-nodemon src/server.js
+npm run dev
 ```
 
 ### Frontend
@@ -139,18 +141,18 @@ The app will be available at `http://localhost:5173`.
 
 Base URL: `/api/v1`. All routes under `/roadmaps` and `/milestones` require a JWT bearer token (`Authorization: Bearer <token>`), obtained from `/auth/login` or `/auth/register`.
 
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/auth/register` | Create an account |
-| POST | `/auth/login` | Log in |
-| POST | `/roadmaps` | Create a roadmap and kick off AI generation (async — returns immediately with `status: "generating"`) |
-| GET | `/roadmaps` | List the current user's roadmaps |
-| GET | `/roadmaps/:id` | Get a roadmap with its phases, milestones, and progress |
-| GET | `/roadmaps/:id/next` | Get the next incomplete milestone |
-| PATCH | `/roadmaps/:id/abandon` | Mark a roadmap as abandoned |
-| DELETE | `/roadmaps/:id` | Delete a roadmap and its phases/milestones |
-| PATCH | `/roadmaps/:id/phases/:phaseId/regenerate` | Regenerate a single phase's milestones |
-| PATCH | `/milestones/:id` | Toggle a milestone's completion status |
+| Method | Endpoint                                   | Description                                                                                           |
+| ------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| POST   | `/auth/register`                           | Create an account                                                                                     |
+| POST   | `/auth/login`                              | Log in                                                                                                |
+| POST   | `/roadmaps`                                | Create a roadmap and kick off AI generation (async — returns immediately with `status: "generating"`) |
+| GET    | `/roadmaps`                                | List the current user's roadmaps                                                                      |
+| GET    | `/roadmaps/:id`                            | Get a roadmap with its phases, milestones, and progress                                               |
+| GET    | `/roadmaps/:id/next`                       | Get the next incomplete milestone                                                                     |
+| PATCH  | `/roadmaps/:id/abandon`                    | Mark a roadmap as abandoned                                                                           |
+| DELETE | `/roadmaps/:id`                            | Delete a roadmap and its phases/milestones                                                            |
+| PATCH  | `/roadmaps/:id/phases/:phaseId/regenerate` | Regenerate a single phase's milestones                                                                |
+| PATCH  | `/milestones/:id`                          | Toggle a milestone's completion status                                                                |
 
 Roadmap generation is asynchronous: the API responds immediately (`202`) with the roadmap in a `generating` state, and the frontend polls `GET /roadmaps/:id` until the status becomes `active` (or `abandoned`, if generation failed).
 
