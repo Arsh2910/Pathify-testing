@@ -4,17 +4,20 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
 
-    "allowJs": true,
-    "checkJs": false,
-
     "rootDir": "./backend/src",
     "outDir": "./backend/dist",
 
-    "strict": false,
+    "strict": true,
+
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
   },
 
   "include": ["backend/src/**/*"],
-  "exclude": ["backend/node_modules", "backend/dist"]
+  "exclude": ["backend/node_modules", "backend/dist", "frontend"]
 }

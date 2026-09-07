@@ -118,6 +118,10 @@ Generate a list of sequential milestones (tasks/topics to learn) specifically fo
       },
     });
 
+    if (!response.text) {
+      throw new Error("Gemini returned an empty response");
+    }
+
     return JSON.parse(response.text) as Milestone[];
   } catch (error) {
     console.error("AI Generation Error:", error);

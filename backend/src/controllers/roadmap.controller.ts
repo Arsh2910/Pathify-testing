@@ -104,7 +104,7 @@ export async function getRoadmapDetails(
 }
 
 export async function regeneratePhase(
-  req: Request,
+  req: Request<{ id: string; phaseId: string }>,
   res: Response,
   next: NextFunction,
 ) {
@@ -115,7 +115,7 @@ export async function regeneratePhase(
     const roadmap = await Roadmap.findOne({ _id: roadmapId, user: userId });
     if (!roadmap) return next(new AppError("Roadmap not found", 404));
 
-    const phase = await Phase.findOne({ _id: phaseId, roadmap: roadmapId });
+    const phase = await Phase.findOne({ _id: phaseId, roadmap: roadmap._id });
     if (!phase) return next(new AppError("Phase not found", 404));
 
     const userPreferences = {

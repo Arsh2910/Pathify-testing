@@ -6,7 +6,9 @@ import type { UserDocument } from "../models/User.model";
 
 const signToken = (id: string): string => {
   const options: jwt.SignOptions = {
-    expiresIn: (process.env.JWT_EXPIRES_IN || "30d") as jwt.SignOptions["expiresIn"],
+    expiresIn: (process.env.JWT_EXPIRES_IN || "30d") as NonNullable<
+      jwt.SignOptions["expiresIn"]
+    >,
   };
   return jwt.sign({ id }, process.env.JWT_SECRET as string, options);
 };
@@ -18,14 +20,15 @@ const createSendToken = (
 ) => {
   const token = signToken(user._id.toString());
 
-  // Remove password from output (valid: IUser.password is optional)
-  user.password = undefined;
+  // Remove the password from the response without mutating the document.
+  const safeUser = user.toObject();
+  delete safeUser.password;
 
   res.status(statusCode).json({
     status: "success",
     token,
     data: {
-      user,
+      user: safeUser,
     },
   });
 };
