@@ -11,5 +11,6 @@ router.post(
   authController.register,
 );
 router.post("/login", validateRequest(loginSchema), authController.login);
+router.post("/google", authController.googleAuth);
 
 export default router;

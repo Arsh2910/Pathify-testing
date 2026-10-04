@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema<IUser, UserModel, IUserMethods>(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: false, // not required for Google OAuth users
       minlength: 6,
       select: false,
     },

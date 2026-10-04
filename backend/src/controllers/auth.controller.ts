@@ -1,8 +1,11 @@
 import User from "../models/User.model";
 import jwt from "jsonwebtoken";
 import AppError from "../utils/appError";
+import { OAuth2Client } from "google-auth-library";
 import type { NextFunction, Request, Response } from "express";
 import type { UserDocument } from "../models/User.model";
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const signToken = (id: string): string => {
   const options: jwt.SignOptions = {
@@ -78,6 +81,46 @@ export const login = async (
 
     if (!user || !(await user.comparePassword(password, user.password!))) {
       return next(new AppError("Incorrect email or password", 401));
+    }
+
+    createSendToken(user, 200, res);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Google OAuth — frontend sends the Google ID token, we verify + find/create user
+export const googleAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { idToken } = req.body as { idToken?: string };
+
+    if (!idToken) {
+      return next(new AppError("Google ID token is required", 400));
+    }
+
+    // Verify the token with Google
+    const clientId = process.env.GOOGLE_CLIENT_ID as string;
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: clientId,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return next(new AppError("Invalid Google token", 401));
+    }
+
+    const { email } = payload;
+
+    // Find existing user or create a new one (no password for OAuth users)
+    let user = (await User.findOne({ email })) as UserDocument | null;
+
+    if (!user) {
+      user = (await User.create({ email })) as UserDocument;
     }
 
     createSendToken(user, 200, res);
