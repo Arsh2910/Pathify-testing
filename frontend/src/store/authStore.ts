@@ -18,7 +18,7 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (email: string, password: string, skillLevel: string, hoursPerDay: number) => Promise<User>;
+  register: (email: string, password: string) => Promise<User>;
   logout: () => void;
   updateStreak: (streak: StreakUpdate) => void;
 }
@@ -40,12 +40,10 @@ const useAuthStore = create<AuthState>((set) => ({
     return data.user;
   },
 
-  register: async (email, password, skillLevel, hoursPerDay) => {
+  register: async (email, password) => {
     const res = await axiosClient.post('/auth/register', {
       email,
       password,
-      skillLevel,
-      hoursPerDay,
     });
     const { token, data } = res.data as { token: string; data: { user: User } };
     localStorage.setItem('trailhead_token', token);
