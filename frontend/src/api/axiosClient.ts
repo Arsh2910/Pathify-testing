@@ -3,7 +3,11 @@ import axios from 'axios';
 // In production (Vercel), set VITE_API_URL to your Render backend URL e.g:
 // https://your-app.onrender.com/api/v1
 // Locally, falls back to '/api/v1' which Vite proxies to localhost:5000
-const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+const rawBase = (import.meta.env.VITE_API_URL as string | undefined) || '/api/v1';
+const trimmedBase = rawBase.replace(/\/+$/, '');
+const API_BASE = trimmedBase.endsWith('/api/v1')
+  ? trimmedBase
+  : `${trimmedBase}/api/v1`;
 
 const axiosClient = axios.create({
   baseURL: API_BASE,

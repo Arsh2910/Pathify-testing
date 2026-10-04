@@ -1,11 +1,8 @@
 import User from "../models/User.model";
 import jwt from "jsonwebtoken";
 import AppError from "../utils/appError";
-import { OAuth2Client } from "google-auth-library";
 import type { NextFunction, Request, Response } from "express";
 import type { UserDocument } from "../models/User.model";
-
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const signToken = (id: string): string => {
   const options: jwt.SignOptions = {
@@ -89,32 +86,39 @@ export const login = async (
   }
 };
 
-// Google OAuth — frontend sends the Google ID token, we verify + find/create user
+// Google OAuth — frontend sends Google access_token, we verify via userinfo endpoint
 export const googleAuth = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const { idToken } = req.body as { idToken?: string };
+    const { access_token, idToken } = req.body as {
+      access_token?: string;
+      idToken?: string;
+    };
+    const token = access_token || idToken;
 
-    if (!idToken) {
-      return next(new AppError("Google ID token is required", 400));
+    if (!token) {
+      return next(new AppError("Google access token is required", 400));
     }
 
-    // Verify the token with Google
-    const clientId = process.env.GOOGLE_CLIENT_ID as string;
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: clientId,
-    });
+    // Fetch the user's profile from Google using the access token
+    const googleRes = await fetch(
+      `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`,
+    );
 
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email) {
-      return next(new AppError("Invalid Google token", 401));
+    if (!googleRes.ok) {
+      return next(new AppError("Failed to verify Google token", 401));
     }
 
-    const { email } = payload;
+    const googleUser = (await googleRes.json()) as { email?: string };
+
+    if (!googleUser.email) {
+      return next(new AppError("Could not retrieve email from Google", 401));
+    }
+
+    const { email } = googleUser;
 
     // Find existing user or create a new one (no password for OAuth users)
     let user = (await User.findOne({ email })) as UserDocument | null;
