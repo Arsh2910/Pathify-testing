@@ -41,14 +41,30 @@ const useAuthStore = create<AuthState>((set) => ({
   },
 
   register: async (email, password) => {
+    // DEBUG STORE A: Entering register action
+    console.log('[AuthStore] A - register() called with email:', email);
+
+    // DEBUG STORE B: About to POST to /auth/register
+    console.log('[AuthStore] B - POSTing to /auth/register...');
     const res = await axiosClient.post('/auth/register', {
       email,
       password,
     });
+
+    // DEBUG STORE C: Got a response — check the raw shape
+    console.log('[AuthStore] C - Response received:', res.status, res.data);
+
     const { token, data } = res.data as { token: string; data: { user: User } };
+
+    // DEBUG STORE D: Destructured token + user
+    console.log('[AuthStore] D - token present:', !!token, '| user:', data?.user);
+
     localStorage.setItem('trailhead_token', token);
     localStorage.setItem('trailhead_user', JSON.stringify(data.user));
     set({ token, user: data.user, isAuthenticated: true });
+
+    // DEBUG STORE E: Store updated, returning user
+    console.log('[AuthStore] E - Store updated, registration complete.');
     return data.user;
   },
 

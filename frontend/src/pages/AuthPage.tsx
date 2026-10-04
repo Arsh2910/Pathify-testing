@@ -34,10 +34,23 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // DEBUG STEP 1: Form submitted — check what values are being used
+    console.log('[Register] Step 1 - Form submitted with:', { email: regEmail, passwordLength: regPassword.length });
+
     try {
+      // DEBUG STEP 2: About to call authStore.register()
+      console.log('[Register] Step 2 - Calling authStore.register()...');
+
       await register(regEmail, regPassword);
+
+      // DEBUG STEP 3: register() resolved successfully
+      console.log('[Register] Step 3 - register() succeeded, navigating to dashboard...');
       navigate('/');
     } catch (err) {
+      // DEBUG STEP 4: register() threw an error — inspect this in console
+      console.error('[Register] Step 4 - register() FAILED:', err);
+      console.error('[Register] Error response data:', (err as { response?: { data?: unknown } }).response?.data);
       setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
