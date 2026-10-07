@@ -1,3 +1,4 @@
+
 # Trailhead
 
 **Focus on what matters.**
@@ -36,6 +37,7 @@ Built as a final year major project.
 - Axios (with JWT interceptor + automatic 401 handling)
 - Tailwind CSS
 - lucide-react icons
+- Google OAuth (`@react-oauth/google`)
 
 **Hosting**
 
@@ -44,7 +46,6 @@ Built as a final year major project.
 - Database: [MongoDB Atlas](https://www.mongodb.com/atlas)
 
 ---
-
 ## Project structure
 
 ```
@@ -124,7 +125,7 @@ npm install
 Create a `.env` file in `frontend/`:
 
 ```env
-VITE_API_BASE_URL=http://localhost:5000/api/v1
+VITE_API_BASE_URL=http://localhost:5000
 ```
 
 Run it:
@@ -136,7 +137,6 @@ npm run dev
 The app will be available at `http://localhost:5173`.
 
 ---
-
 ## API overview
 
 Base URL: `/api/v1`. All routes under `/roadmaps` and `/milestones` require a JWT bearer token (`Authorization: Bearer <token>`), obtained from `/auth/login` or `/auth/register`.
