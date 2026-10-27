@@ -19,6 +19,7 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (email: string, password: string) => Promise<User>;
+  googleLogin: (accessToken: string) => Promise<User>;
   logout: () => void;
   updateStreak: (streak: StreakUpdate) => void;
 }
@@ -44,6 +45,17 @@ const useAuthStore = create<AuthState>((set) => ({
     const res = await axiosClient.post("/auth/register", {
       email,
       password,
+    });
+    const { token, data } = res.data as { token: string; data: { user: User } };
+    localStorage.setItem("trailhead_token", token);
+    localStorage.setItem("trailhead_user", JSON.stringify(data.user));
+    set({ token, user: data.user, isAuthenticated: true });
+    return data.user;
+  },
+
+  googleLogin: async (accessToken: string) => {
+    const res = await axiosClient.post("/auth/google", {
+      access_token: accessToken,
     });
     const { token, data } = res.data as { token: string; data: { user: User } };
     localStorage.setItem("trailhead_token", token);
