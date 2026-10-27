@@ -120,13 +120,22 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
               <div>
                 <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '10px', fontWeight: 700, color: 'var(--th-muted)', letterSpacing: '0.09em', marginBottom: '8px' }}>RESOURCES</p>
                 <div className="flex flex-wrap gap-2">
-                  {milestone.resources.map((r, i) => (
-                    <a key={i} href={r.link} target="_blank" rel="noopener noreferrer"
-                      className="resource-chip" onClick={(e) => e.stopPropagation()}>
-                      <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>{resourceTypeIcon[r.type] || 'link'}</span>
-                      {r.title}
-                    </a>
-                  ))}
+                  {milestone.resources.map((r, i) => {
+                    const safeLink =
+                      !r.link
+                        ? `https://www.google.com/search?q=${encodeURIComponent(`${r.title} ${milestone.title}`)}`
+                        : (r.link.includes('youtube.com/watch') || r.link.includes('youtu.be/'))
+                        ? `https://www.youtube.com/results?search_query=${encodeURIComponent(`${r.title.replace(/tutorial|video|course/gi, '').trim()} ${milestone.title} tutorial`)}`
+                        : r.link;
+
+                    return (
+                      <a key={i} href={safeLink} target="_blank" rel="noopener noreferrer"
+                        className="resource-chip" onClick={(e) => e.stopPropagation()}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>{resourceTypeIcon[r.type] || 'link'}</span>
+                        {r.title}
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}

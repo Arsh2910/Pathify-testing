@@ -7,5 +7,6 @@ const router = express.Router();
 router.use(protect);
 
 router.patch("/:id", milestoneController.updateMilestone);
+router.post("/:id/resources/refresh", milestoneController.refreshMilestoneResources);
 
 export default router;
