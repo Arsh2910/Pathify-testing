@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import AppError from "../utils/appError";
 import type { NextFunction, Request, Response } from "express";
 import type { UserDocument } from "../models/User.model";
+import { sendPasswordResetEmail } from "../services/email.service";
 
 const signToken = (id: string): string => {
   const options: jwt.SignOptions = {
@@ -183,18 +184,25 @@ export const forgotPassword = async (
     const resetCode = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
-    // In a production email setup, we would send an email here.
-    // For seamless local/testing experience, we log the code to console
-    // and also supply it in the JSON response so the user can easily reset immediately.
-    console.log(
-      `[GoalWeave Auth] Password reset code for ${user.email}: ${resetCode}`,
-    );
+    // Send real email via Nodemailer (or dev console fallback if SMTP is not configured)
+    const emailResult = await sendPasswordResetEmail(user.email, resetCode, user.name);
 
+    if (emailResult.sent) {
+      return res.status(200).json({
+        status: "success",
+        message: `A 6-digit password reset code and direct link have been sent to ${user.email}. Please check your inbox.`,
+        emailSent: true,
+      });
+    }
+
+    // Dev mode fallback: credentials missing or send failed
     res.status(200).json({
       status: "success",
-      message:
-        "Password reset code generated successfully. Valid for 15 minutes.",
-      resetCode, // convenient for dev/demo testing
+      message: emailResult.error
+        ? `Could not deliver email (${emailResult.error}). Falling back to dev mode.`
+        : "Password reset code generated (Dev Mode: SMTP not configured in .env).",
+      resetCode, // exposed only in dev fallback
+      emailSent: false,
     });
   } catch (err) {
     next(err);

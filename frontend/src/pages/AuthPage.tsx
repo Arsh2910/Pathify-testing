@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, type FormEvent } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import useAuthStore from "../store/authStore";
+import { fireConfetti } from "../utils/confetti";
 
 interface AuthPageProps {
   initialTab?: "login" | "register" | "forgot" | "reset";
@@ -76,6 +77,7 @@ function GoogleSvg() {
 }
 
 export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<"login" | "register" | "forgot" | "reset">(
     initialTab,
   );
@@ -104,6 +106,8 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
   // Forgot / Reset inputs
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetCode, setResetCode] = useState("");
+  const [emailDelivered, setEmailDelivered] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [generatedCodePreview, setGeneratedCodePreview] = useState<
     string | null
   >(null);
@@ -113,6 +117,50 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
   const { login, register, googleLogin, forgotPassword, resetPassword } =
     useAuthStore();
   const navigate = useNavigate();
+
+  // Cooldown timer for resending reset code
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const passwordStrength = (() => {
+    if (!newPassword) return { score: 0, label: "", color: "" };
+    let score = 0;
+    if (newPassword.length >= 6) score += 1;
+    if (newPassword.length >= 8) score += 1;
+    if (/[0-9]/.test(newPassword)) score += 1;
+    if (/[^A-Za-z0-9]/.test(newPassword)) score += 1;
+
+    if (score <= 1)
+      return { score: 1, label: "Weak", color: "var(--th-error, #ef4444)" };
+    if (score <= 2) return { score: 2, label: "Fair", color: "#f59e0b" };
+    return { score: 3, label: "Strong", color: "#10b981" };
+  })();
+
+  // Parse URL query parameters (e.g. from real email 1-click links)
+  useEffect(() => {
+    const qTab = searchParams.get("tab");
+    const qEmail = searchParams.get("email");
+    const qCode = searchParams.get("code");
+
+    if (qTab && ["login", "register", "forgot", "reset"].includes(qTab)) {
+      setTab(qTab as "login" | "register" | "forgot" | "reset");
+    } else if (qCode || qEmail) {
+      setTab("reset");
+    }
+
+    if (qEmail) {
+      setForgotEmail(qEmail);
+      setLoginEmail(qEmail);
+    }
+    if (qCode) {
+      setResetCode(qCode);
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -172,7 +220,12 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
     try {
       const res = await forgotPassword(forgotEmail);
       setSuccessMsg(res.message);
-      if (res.resetCode) {
+      setResendCooldown(60);
+      if (res.emailSent) {
+        setEmailDelivered(true);
+        setGeneratedCodePreview(null);
+      } else if (res.resetCode) {
+        setEmailDelivered(false);
         setGeneratedCodePreview(res.resetCode);
         setResetCode(res.resetCode);
       }
@@ -181,6 +234,33 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
       setError(
         (err as { response?: { data?: { message?: string } } }).response?.data
           ?.message || "Failed to process password reset request.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0 || loading || !forgotEmail) return;
+    setLoading(true);
+    setError("");
+    setSuccessMsg("");
+    try {
+      const res = await forgotPassword(forgotEmail);
+      setSuccessMsg(res.message || "A fresh reset code has been sent!");
+      setResendCooldown(60);
+      if (res.emailSent) {
+        setEmailDelivered(true);
+        setGeneratedCodePreview(null);
+      } else if (res.resetCode) {
+        setEmailDelivered(false);
+        setGeneratedCodePreview(res.resetCode);
+        setResetCode(res.resetCode);
+      }
+    } catch (err) {
+      setError(
+        (err as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || "Failed to resend code. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -204,7 +284,8 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
     try {
       await resetPassword(forgotEmail || loginEmail, resetCode, newPassword);
       setSuccessMsg("Password successfully reset! Logging you in...");
-      setTimeout(() => navigate("/"), 600);
+      fireConfetti();
+      setTimeout(() => navigate("/"), 1100);
     } catch (err) {
       setError(
         (err as { response?: { data?: { message?: string } } }).response?.data
@@ -641,6 +722,48 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
           {/* ================= FORGOT PASSWORD FORM ================= */}
           {tab === "forgot" && (
             <div className="space-y-5 animate-fade-in">
+              {/* Step Indicator */}
+              <div className="flex items-center justify-between mb-2 px-1">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{
+                      background: "var(--th-primary-container)",
+                      color: "var(--th-on-primary)",
+                    }}
+                  >
+                    1
+                  </div>
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: "var(--th-on-surface)" }}
+                  >
+                    Request Code
+                  </span>
+                </div>
+                <div
+                  className="h-[1px] flex-1 mx-3"
+                  style={{ background: "var(--th-outline-variant)" }}
+                />
+                <div className="flex items-center gap-2 opacity-50">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{
+                      background: "var(--th-surface-container-high)",
+                      color: "var(--th-on-surface-variant)",
+                    }}
+                  >
+                    2
+                  </div>
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: "var(--th-on-surface-variant)" }}
+                  >
+                    New Password
+                  </span>
+                </div>
+              </div>
+
               <div className="text-left">
                 <h3
                   style={{
@@ -660,8 +783,7 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                     color: "var(--th-on-surface-variant)",
                   }}
                 >
-                  Enter your account email. We'll generate a secure 6-digit reset
-                  code valid for 15 minutes.
+                  Enter your account email. We'll send a 6-digit verification code and a direct 1-click reset link to your inbox.
                 </p>
               </div>
 
@@ -676,16 +798,28 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                       color: "var(--th-on-surface)",
                     }}
                   >
-                    Email Address
+                    Account Email Address
                   </label>
-                  <input
-                    type="email"
-                    className="input-field"
-                    placeholder="weaver@example.com"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type="email"
+                      className="input-field pl-10"
+                      placeholder="weaver@example.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      required
+                    />
+                    <span
+                      className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2"
+                      style={{
+                        fontSize: "19px",
+                        color: "var(--th-on-surface-variant)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      mail
+                    </span>
+                  </div>
                 </div>
 
                 <button
@@ -701,7 +835,7 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                       >
                         refresh
                       </span>{" "}
-                      Generating Code...
+                      Dispatching Code...
                     </>
                   ) : (
                     <>
@@ -709,9 +843,9 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                         className="material-symbols-outlined"
                         style={{ fontSize: "18px" }}
                       >
-                        mark_email_read
+                        send
                       </span>{" "}
-                      Send Reset Code
+                      Send Verification Code
                     </>
                   )}
                 </button>
@@ -725,7 +859,7 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                     setError("");
                     setSuccessMsg("");
                   }}
-                  className="text-sm font-semibold hover:underline inline-flex items-center gap-1"
+                  className="text-sm font-semibold hover:underline inline-flex items-center gap-1.5"
                   style={{
                     color: "var(--th-primary)",
                     background: "none",
@@ -748,6 +882,49 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
           {/* ================= RESET PASSWORD FORM ================= */}
           {tab === "reset" && (
             <div className="space-y-5 animate-fade-in">
+              {/* Step Indicator */}
+              <div className="flex items-center justify-between mb-2 px-1">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{
+                      background: "rgba(16, 185, 129, 0.15)",
+                      color: "#10b981",
+                      border: "1px solid rgba(16, 185, 129, 0.4)",
+                    }}
+                  >
+                    ✓
+                  </div>
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: "var(--th-on-surface-variant)" }}
+                  >
+                    Code Sent
+                  </span>
+                </div>
+                <div
+                  className="h-[1px] flex-1 mx-3"
+                  style={{ background: "var(--th-outline-variant)" }}
+                />
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{
+                      background: "var(--th-primary-container)",
+                      color: "var(--th-on-primary)",
+                    }}
+                  >
+                    2
+                  </div>
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: "var(--th-on-surface)" }}
+                  >
+                    New Password
+                  </span>
+                </div>
+              </div>
+
               <div className="text-left">
                 <h3
                   style={{
@@ -767,14 +944,55 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                     color: "var(--th-on-surface-variant)",
                   }}
                 >
-                  Enter the 6-digit verification code and choose your new
-                  password.
+                  Enter the 6-digit code sent to your email and choose a secure new password.
                 </p>
               </div>
 
+              {/* Real Email Notification Banner */}
+              {emailDelivered && !generatedCodePreview && (
+                <div
+                  className="p-3.5 rounded-xl border flex items-start gap-3 animate-fade-in"
+                  style={{
+                    background: "rgba(99, 102, 241, 0.08)",
+                    borderColor: "var(--th-primary-container)",
+                  }}
+                >
+                  <span
+                    className="material-symbols-outlined text-indigo-400"
+                    style={{ fontSize: "22px", flexShrink: 0 }}
+                  >
+                    mark_email_unread
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      style={{
+                        fontFamily: "Hanken Grotesk",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        color: "var(--th-primary)",
+                      }}
+                    >
+                      Real Email Dispatched!
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: "Hanken Grotesk",
+                        fontSize: "12px",
+                        color: "var(--th-on-surface-variant)",
+                        marginTop: "2px",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      A 6-digit code and direct 1-click reset link were delivered to <strong>{forgotEmail}</strong>. Check your inbox and spam folder.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Dev Mode Banner (fallback when no SMTP / Resend API key is set) */}
               {generatedCodePreview && (
                 <div
-                  className="p-3.5 rounded-lg border flex items-center justify-between"
+                  className="p-3.5 rounded-xl border flex items-center justify-between animate-fade-in"
                   style={{
                     background: "var(--th-surface-container-high)",
                     borderColor: "var(--th-primary-container)",
@@ -790,12 +1008,12 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                         letterSpacing: "0.05em",
                       }}
                     >
-                      YOUR RESET CODE:
+                      DEV MODE CODE (Auto-Filled):
                     </p>
                     <p
                       style={{
                         fontFamily: "monospace",
-                        fontSize: "20px",
+                        fontSize: "22px",
                         fontWeight: 700,
                         letterSpacing: "0.2em",
                         color: "var(--th-on-surface)",
@@ -805,7 +1023,7 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                     </p>
                   </div>
                   <span
-                    className="material-symbols-outlined text-green-500"
+                    className="material-symbols-outlined text-emerald-400"
                     style={{ fontSize: "28px" }}
                   >
                     key
@@ -814,18 +1032,37 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
               )}
 
               <form onSubmit={handleResetPassword} className="space-y-4">
+                {/* Email Address */}
                 <div>
-                  <label
-                    className="block mb-1.5"
-                    style={{
-                      fontFamily: "Hanken Grotesk",
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      color: "var(--th-on-surface)",
-                    }}
-                  >
-                    Email Address
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label
+                      style={{
+                        fontFamily: "Hanken Grotesk",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        color: "var(--th-on-surface)",
+                      }}
+                    >
+                      Email Address
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTab("forgot");
+                        setError("");
+                        setSuccessMsg("");
+                      }}
+                      className="text-xs font-semibold hover:underline"
+                      style={{
+                        color: "var(--th-primary)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Change email?
+                    </button>
+                  </div>
                   <input
                     type="email"
                     className="input-field"
@@ -836,6 +1073,7 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                   />
                 </div>
 
+                {/* 6-Digit Reset Code */}
                 <div>
                   <label
                     className="block mb-1.5"
@@ -846,19 +1084,73 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                       color: "var(--th-on-surface)",
                     }}
                   >
-                    6-Digit Reset Code
+                    6-Digit Verification Code
                   </label>
                   <input
                     type="text"
                     maxLength={6}
-                    className="input-field text-center tracking-widest font-mono text-lg"
-                    placeholder="123456"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    className="input-field text-center tracking-[0.35em] font-mono text-xl uppercase font-bold"
+                    placeholder="••••••"
                     value={resetCode}
-                    onChange={(e) => setResetCode(e.target.value)}
+                    onChange={(e) =>
+                      setResetCode(
+                        e.target.value
+                          .replace(/[^0-9a-zA-Z]/g, "")
+                          .toUpperCase()
+                          .slice(0, 6),
+                      )
+                    }
                     required
                   />
+
+                  {/* Resend Cooldown Counter */}
+                  <div className="flex items-center justify-between text-xs mt-2 px-0.5">
+                    <span style={{ color: "var(--th-on-surface-variant)" }}>
+                      Didn't get the email?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      disabled={resendCooldown > 0 || loading}
+                      className="font-semibold transition-opacity disabled:opacity-50"
+                      style={{
+                        color: "var(--th-primary)",
+                        background: "none",
+                        border: "none",
+                        cursor:
+                          resendCooldown > 0 || loading
+                            ? "not-allowed"
+                            : "pointer",
+                      }}
+                    >
+                      {resendCooldown > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-slate-400">
+                          <span
+                            className="material-symbols-outlined"
+                            style={{ fontSize: "14px" }}
+                          >
+                            schedule
+                          </span>
+                          Resend in {resendCooldown}s
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 hover:underline">
+                          <span
+                            className="material-symbols-outlined"
+                            style={{ fontSize: "14px" }}
+                          >
+                            forward_to_inbox
+                          </span>
+                          Resend Code
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
+                {/* New Password */}
                 <div>
                   <label
                     className="block mb-1.5"
@@ -899,8 +1191,42 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                       </span>
                     </button>
                   </div>
+
+                  {/* Password Strength Meter */}
+                  {newPassword && (
+                    <div className="mt-2 space-y-1 animate-fade-in">
+                      <div className="flex items-center justify-between text-xs">
+                        <span style={{ color: "var(--th-on-surface-variant)" }}>
+                          Password strength:
+                        </span>
+                        <span
+                          style={{
+                            color: passwordStrength.color,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {passwordStrength.label}
+                        </span>
+                      </div>
+                      <div
+                        className="w-full h-1.5 rounded-full overflow-hidden"
+                        style={{
+                          background: "var(--th-surface-container-high)",
+                        }}
+                      >
+                        <div
+                          className="h-full transition-all duration-300 rounded-full"
+                          style={{
+                            width: `${(passwordStrength.score / 3) * 100}%`,
+                            backgroundColor: passwordStrength.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
+                {/* Confirm New Password */}
                 <div>
                   <label
                     className="block mb-1.5"
@@ -941,16 +1267,37 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                       </span>
                     </button>
                   </div>
-                  {confirmNewPassword && newPassword !== confirmNewPassword && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Passwords do not match
-                    </p>
+
+                  {confirmNewPassword && (
+                    <div className="flex items-center gap-1.5 text-xs mt-1.5 animate-fade-in">
+                      {newPassword === confirmNewPassword ? (
+                        <span className="text-emerald-500 font-medium inline-flex items-center gap-1">
+                          <span
+                            className="material-symbols-outlined"
+                            style={{ fontSize: "15px" }}
+                          >
+                            check_circle
+                          </span>
+                          Passwords match
+                        </span>
+                      ) : (
+                        <span className="text-red-400 font-medium inline-flex items-center gap-1">
+                          <span
+                            className="material-symbols-outlined"
+                            style={{ fontSize: "15px" }}
+                          >
+                            cancel
+                          </span>
+                          Passwords do not match
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
 
                 <button
                   type="submit"
-                  className="btn-primary w-full py-3 mt-2"
+                  className="btn-primary w-full py-3 mt-3 cursor-pointer"
                   disabled={loading}
                 >
                   {loading ? (
@@ -961,7 +1308,7 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                       >
                         refresh
                       </span>{" "}
-                      Resetting Password...
+                      Securing Account...
                     </>
                   ) : (
                     <>
@@ -985,7 +1332,7 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                     setError("");
                     setSuccessMsg("");
                   }}
-                  className="text-sm font-semibold hover:underline inline-flex items-center gap-1"
+                  className="text-sm font-semibold hover:underline inline-flex items-center gap-1.5"
                   style={{
                     color: "var(--th-primary)",
                     background: "none",

@@ -23,7 +23,7 @@ interface AuthState {
   googleLogin: (accessToken: string) => Promise<User>;
   forgotPassword: (
     email: string,
-  ) => Promise<{ message: string; resetCode?: string }>;
+  ) => Promise<{ message: string; resetCode?: string; emailSent?: boolean }>;
   resetPassword: (
     email: string,
     token: string,
@@ -90,7 +90,7 @@ const useAuthStore = create<AuthState>((set) => ({
 
   forgotPassword: async (email: string) => {
     const res = await axiosClient.post("/auth/forgot-password", { email });
-    return res.data as { message: string; resetCode?: string };
+    return res.data as { message: string; resetCode?: string; emailSent?: boolean };
   },
 
   resetPassword: async (email: string, token: string, password: string) => {
