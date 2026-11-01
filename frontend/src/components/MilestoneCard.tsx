@@ -150,14 +150,15 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
               type="button"
               onClick={() => setFocusModalOpen(true)}
               title="Start Pomodoro Focus Session"
-              className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition opacity-90 hover:opacity-100"
+              className="py-1 px-2.5 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer hover:opacity-90"
               style={{
-                backgroundColor: 'color-mix(in srgb, var(--th-primary) 15%, transparent)',
-                color: 'var(--th-primary)',
-                border: '1px solid color-mix(in srgb, var(--th-primary) 30%, transparent)',
+                fontFamily: 'Hanken Grotesk, sans-serif',
+                backgroundColor: 'var(--th-surface-container-high)',
+                color: 'var(--th-on-surface)',
+                border: '1px solid var(--th-outline-variant)',
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>timer</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--th-primary-container)' }}>timer</span>
               <span>Focus</span>
             </button>
 
@@ -166,15 +167,16 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
               onClick={handleBreakdown}
               disabled={loadingBabySteps}
               title="Break down milestone into 3 effortless baby steps"
-              className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition opacity-90 hover:opacity-100"
+              className="py-1 px-2.5 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer hover:opacity-90"
               style={{
-                backgroundColor: 'color-mix(in srgb, var(--th-secondary) 15%, transparent)',
-                color: 'var(--th-secondary)',
-                border: '1px solid color-mix(in srgb, var(--th-secondary) 30%, transparent)',
+                fontFamily: 'Hanken Grotesk, sans-serif',
+                backgroundColor: 'var(--th-surface-container-high)',
+                color: 'var(--th-on-surface)',
+                border: '1px solid var(--th-outline-variant)',
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>
-                {loadingBabySteps ? 'hourglass_top' : 'psychology'}
+              <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--th-secondary)' }}>
+                {loadingBabySteps ? 'sync' : 'psychology'}
               </span>
               <span>{loadingBabySteps ? 'Thinking...' : "I'm Stuck"}</span>
             </button>

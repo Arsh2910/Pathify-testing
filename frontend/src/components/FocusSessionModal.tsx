@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Milestone } from '../store/roadmapStore';
+import type { Milestone } from '../store/roadmapStore';
 
 interface FocusSessionModalProps {
   milestone: Milestone;
@@ -25,54 +25,55 @@ export const FocusSessionModal: React.FC<FocusSessionModalProps> = ({
   const [isActive, setIsActive] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [completedCelebration, setCompletedCelebration] = useState(false);
+  const [sessionCompleted, setSessionCompleted] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Play synthesized bell chime using Web Audio API
+  // Play harmonic Tibetan singing bowl chime via Web Audio API
   const playFocusBell = () => {
     if (!soundEnabled) return;
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const ctx = new AudioCtx();
 
-      // Tibetan bowl harmonic sound: base tone + overtone + soft decay
-      const tones = [528, 1056, 1584]; // 528 Hz is the "clarity" frequency
-      tones.forEach((freq, i) => {
+      // Frequencies for a clear, resonant harmonic chime (528 Hz base)
+      const harmonics = [528, 1056, 1584];
+      harmonics.forEach((freq, idx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, ctx.currentTime);
 
-        // Volume envelope
-        const initialGain = 0.25 / (i + 1);
-        gain.gain.setValueAtTime(initialGain, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 3.5);
+        const initialVolume = 0.22 / (idx + 1);
+        gain.gain.setValueAtTime(initialVolume, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 3.2);
 
         osc.connect(gain);
         gain.connect(ctx.destination);
 
         osc.start();
-        osc.stop(ctx.currentTime + 3.6);
+        osc.stop(ctx.currentTime + 3.3);
       });
     } catch (err) {
-      console.warn('AudioContext not permitted or supported:', err);
+      console.warn('AudioContext unavailable:', err);
     }
   };
 
-  // Reset timer when minutes preset changes or modal opens
   const handleSelectPreset = (mins: number) => {
     setSelectedMinutes(mins);
     setSecondsRemaining(mins * 60);
     setIsActive(false);
+    setSessionCompleted(false);
   };
 
   useEffect(() => {
     if (isOpen) {
       setSecondsRemaining(selectedMinutes * 60);
       setIsActive(false);
-      setCompletedCelebration(false);
+      setSessionCompleted(false);
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -86,8 +87,8 @@ export const FocusSessionModal: React.FC<FocusSessionModalProps> = ({
           if (prev <= 1) {
             clearInterval(timerRef.current!);
             setIsActive(false);
+            setSessionCompleted(true);
             playFocusBell();
-            setCompletedCelebration(true);
             return 0;
           }
           return prev - 1;
@@ -102,11 +103,15 @@ export const FocusSessionModal: React.FC<FocusSessionModalProps> = ({
     };
   }, [isActive, secondsRemaining]);
 
-  // Keyboard shortcut: Space toggles timer, Esc closes
+  // Keyboard accessibility: Space toggles, Esc closes
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
-      if (e.key === ' ' && (e.target as HTMLElement).tagName !== 'BUTTON' && (e.target as HTMLElement).tagName !== 'INPUT') {
+      if (
+        e.key === ' ' &&
+        (e.target as HTMLElement).tagName !== 'BUTTON' &&
+        (e.target as HTMLElement).tagName !== 'INPUT'
+      ) {
         e.preventDefault();
         setIsActive((prev) => !prev);
       } else if (e.key === 'Escape') {
@@ -120,20 +125,24 @@ export const FocusSessionModal: React.FC<FocusSessionModalProps> = ({
   if (!isOpen) return null;
 
   const totalSeconds = selectedMinutes * 60;
-  const progressPercent = totalSeconds > 0 ? ((totalSeconds - secondsRemaining) / totalSeconds) * 100 : 0;
+  const progressRatio = totalSeconds > 0 ? (totalSeconds - secondsRemaining) / totalSeconds : 0;
+  const progressPercent = progressRatio * 100;
+
   const minutes = Math.floor(secondsRemaining / 60);
   const seconds = secondsRemaining % 60;
   const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+  const circumference = 2 * Math.PI * 68; // radius 68
+  const strokeDashoffset = circumference - (circumference * progressPercent) / 100;
 
   const handleComplete = async () => {
     setIsCompleting(true);
     try {
       playFocusBell();
       await onCompleteMilestone(milestone._id);
-      setCompletedCelebration(true);
       setTimeout(() => {
         onClose();
-      }, 1200);
+      }, 900);
     } catch (err) {
       console.error(err);
     } finally {
@@ -142,190 +151,334 @@ export const FocusSessionModal: React.FC<FocusSessionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
       <div
-        className="relative w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl transition-all border"
+        className="w-full max-w-lg p-6 sm:p-7 rounded-2xl shadow-2xl relative animate-scale-in"
         style={{
-          backgroundColor: 'var(--th-surface)',
-          borderColor: 'var(--th-border)',
-          color: 'var(--th-text)',
+          background: 'var(--th-surface-container)',
+          border: '1px solid var(--th-outline-variant)',
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--th-border)' }}>
-          <div className="flex items-center gap-2">
-            <span className="flex h-3 w-3 relative">
-              <span
-                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  isActive ? 'bg-amber-400' : 'bg-emerald-400'
-                }`}
-              />
-              <span
-                className={`relative inline-flex rounded-full h-3 w-3 ${
-                  isActive ? 'bg-amber-500' : 'bg-emerald-500'
-                }`}
-              />
+        <div className="flex items-center justify-between pb-4 border-b border-[var(--th-outline-variant)]">
+          <div className="flex items-center gap-2.5">
+            <span
+              className="material-symbols-outlined icon-fill"
+              style={{ color: 'var(--th-primary-container)', fontSize: '24px' }}
+            >
+              timer
             </span>
-            <h2 className="text-lg font-bold">Focus Mode Session</h2>
+            <div>
+              <h3
+                style={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontWeight: 700,
+                  fontSize: '17px',
+                  color: 'var(--th-on-surface)',
+                  lineHeight: '22px',
+                }}
+              >
+                Focus Session
+              </h3>
+              <p
+                style={{
+                  fontFamily: 'Hanken Grotesk, sans-serif',
+                  fontSize: '11px',
+                  color: 'var(--th-muted)',
+                }}
+              >
+                Single-task focus mode to eliminate friction
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={() => setSoundEnabled(!soundEnabled)}
-              title={soundEnabled ? 'Sound alerts enabled' : 'Muted'}
-              className="p-1.5 rounded-lg text-sm hover:opacity-80 transition"
-              style={{ backgroundColor: 'var(--th-surface-container)' }}
+              title={soundEnabled ? 'Chime on completion: Enabled' : 'Chime on completion: Muted'}
+              className="p-1.5 rounded-lg text-xs cursor-pointer transition flex items-center justify-center hover:opacity-80"
+              style={{
+                color: soundEnabled ? 'var(--th-primary-container)' : 'var(--th-muted)',
+                background: 'var(--th-surface-container-high)',
+              }}
             >
-              {soundEnabled ? '🔔' : '🔕'}
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                {soundEnabled ? 'notifications_active' : 'notifications_off'}
+              </span>
             </button>
+
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-sm hover:opacity-80 transition text-gray-400 hover:text-gray-200"
+              className="p-1.5 rounded-lg text-xs cursor-pointer transition flex items-center justify-center hover:opacity-80 text-gray-400 hover:text-gray-200"
             >
-              ✕
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                close
+              </span>
             </button>
           </div>
         </div>
 
-        {/* Milestone info */}
-        <div className="mt-4 p-3.5 rounded-2xl" style={{ backgroundColor: 'var(--th-surface-container)' }}>
-          <div className="text-xs font-semibold uppercase tracking-wider text-amber-500 mb-1">
-            Current Target
-          </div>
-          <div className="font-semibold text-base line-clamp-1">{milestone.title}</div>
-          {milestone.microFirstStep && (
-            <div className="mt-2 text-xs flex items-start gap-1.5 text-emerald-400/90 bg-emerald-950/30 p-2 rounded-xl border border-emerald-500/20">
-              <span className="text-sm">⚡</span>
-              <span>
-                <strong>First Action:</strong> {milestone.microFirstStep}
+        {/* Milestone Context Box */}
+        <div
+          className="mt-4 p-3.5 rounded-xl border border-[var(--th-outline-variant)]"
+          style={{ background: 'var(--th-surface-container-low)' }}
+        >
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <span
+              style={{
+                fontFamily: 'Hanken Grotesk',
+                fontSize: '10px',
+                fontWeight: 700,
+                color: 'var(--th-primary-container)',
+                letterSpacing: '0.08em',
+              }}
+            >
+              CURRENT TARGET
+            </span>
+            {milestone.suggestedTimeBox && (
+              <span
+                style={{
+                  fontFamily: 'Hanken Grotesk',
+                  fontSize: '11px',
+                  color: 'var(--th-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>
+                  schedule
+                </span>
+                {milestone.suggestedTimeBox}
               </span>
+            )}
+          </div>
+          <p
+            style={{
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: 600,
+              fontSize: '14px',
+              color: 'var(--th-on-surface)',
+              lineHeight: '20px',
+            }}
+            className="line-clamp-2"
+          >
+            {milestone.title}
+          </p>
+
+          {/* Micro First Step Banner */}
+          {milestone.microFirstStep && (
+            <div className="micro-step-box flex gap-2.5 mt-2.5 p-2.5">
+              <span
+                className="material-symbols-outlined"
+                style={{ color: 'var(--th-micro-step-color)', fontSize: '16px', flexShrink: 0 }}
+              >
+                bolt
+              </span>
+              <div>
+                <p
+                  style={{
+                    fontFamily: 'Hanken Grotesk',
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    color: 'var(--th-micro-step-color)',
+                    letterSpacing: '0.09em',
+                    marginBottom: '2px',
+                  }}
+                >
+                  START WITH THIS MICRO ACTION
+                </p>
+                <p
+                  style={{
+                    fontFamily: 'Hanken Grotesk',
+                    fontSize: '12px',
+                    color: 'var(--th-on-surface)',
+                    lineHeight: '17px',
+                  }}
+                >
+                  {milestone.microFirstStep}
+                </p>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Preset Selector */}
-        <div className="grid grid-cols-3 gap-2 mt-5">
-          {PRESETS.map((p) => (
-            <button
-              key={p.minutes}
-              onClick={() => handleSelectPreset(p.minutes)}
-              className={`py-2 px-3 rounded-xl text-xs font-medium transition ${
-                selectedMinutes === p.minutes && !isActive
-                  ? 'ring-2 ring-primary font-bold shadow-md'
-                  : 'hover:opacity-80'
-              }`}
-              style={{
-                backgroundColor:
-                  selectedMinutes === p.minutes
-                    ? 'var(--th-primary)'
-                    : 'var(--th-surface-container)',
-                color: selectedMinutes === p.minutes ? '#ffffff' : 'var(--th-text)',
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
+        {/* Preset Selector Chips */}
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          {PRESETS.map((p) => {
+            const isSelected = selectedMinutes === p.minutes;
+            return (
+              <button
+                key={p.minutes}
+                type="button"
+                onClick={() => handleSelectPreset(p.minutes)}
+                className="py-2 px-2.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5"
+                style={{
+                  fontFamily: 'Hanken Grotesk, sans-serif',
+                  background: isSelected
+                    ? 'color-mix(in srgb, var(--th-primary-container) 15%, transparent)'
+                    : 'var(--th-surface-container-high)',
+                  border: `1px solid ${
+                    isSelected ? 'var(--th-primary-container)' : 'var(--th-outline-variant)'
+                  }`,
+                  color: isSelected ? 'var(--th-primary-container)' : 'var(--th-on-surface-variant)',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
+                  {isSelected ? 'radio_button_checked' : 'radio_button_unchecked'}
+                </span>
+                <span>{p.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Circular Countdown Display */}
-        <div className="flex flex-col items-center justify-center my-8">
-          <div className="relative flex items-center justify-center w-52 h-52">
-            {/* SVG Progress Circle */}
-            <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+        {/* Minimalist Gauge & Clock */}
+        <div className="flex flex-col items-center justify-center my-6">
+          <div className="relative flex items-center justify-center w-48 h-48 sm:w-52 sm:h-52">
+            <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 160 160">
+              {/* Background Track Circle */}
               <circle
-                cx="50"
-                cy="50"
-                r="44"
-                stroke="currentColor"
+                cx="80"
+                cy="80"
+                r="68"
+                stroke="var(--th-outline-variant)"
                 strokeWidth="6"
-                className="opacity-15"
+                strokeOpacity="0.25"
                 fill="transparent"
               />
+              {/* Active Progress Circle */}
               <circle
-                cx="50"
-                cy="50"
-                r="44"
-                stroke="var(--th-primary)"
+                cx="80"
+                cy="80"
+                r="68"
+                stroke="var(--th-primary-container)"
                 strokeWidth="6"
-                strokeDasharray={276.4}
-                strokeDashoffset={276.4 - (276.4 * progressPercent) / 100}
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 fill="transparent"
-                className="transition-all duration-500"
+                style={{
+                  transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                  filter: 'drop-shadow(0 0 6px color-mix(in srgb, var(--th-primary-container) 45%, transparent))',
+                }}
               />
             </svg>
 
-            {/* Time inside circle */}
-            <div className="absolute flex flex-col items-center">
-              <span className="text-4xl sm:text-5xl font-mono font-black tracking-tight">
+            {/* Inner Content */}
+            <div className="absolute flex flex-col items-center justify-center text-center">
+              <span
+                style={{
+                  fontFamily: 'Manrope, sans-serif',
+                  fontWeight: 700,
+                  fontSize: '40px',
+                  color: 'var(--th-on-surface)',
+                  lineHeight: 1,
+                  fontVariantNumeric: 'tabular-nums',
+                  letterSpacing: '-0.03em',
+                }}
+              >
                 {formattedTime}
               </span>
-              <span className="text-xs uppercase font-medium mt-1 tracking-widest opacity-60">
-                {isActive ? 'In Focus...' : secondsRemaining === 0 ? 'Session Complete!' : 'Paused'}
-              </span>
+
+              <div className="mt-2">
+                {sessionCompleted ? (
+                  <span className="pill-base pill-completed flex items-center gap-1">
+                    <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>
+                      check_circle
+                    </span>
+                    Time Completed!
+                  </span>
+                ) : isActive ? (
+                  <span className="pill-base pill-active flex items-center gap-1">
+                    <span
+                      className="w-1.5 h-1.5 rounded-full animate-ping"
+                      style={{ background: 'currentColor' }}
+                    />
+                    In Focus
+                  </span>
+                ) : (
+                  <span className="pill-base pill-generating flex items-center gap-1">
+                    <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>
+                      pause
+                    </span>
+                    Ready
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-
-          {completedCelebration && (
-            <div className="mt-2 text-sm font-bold text-emerald-400 animate-bounce">
-              🎉 Outstanding focus! Time completed!
-            </div>
-          )}
         </div>
 
-        {/* Timer Control Buttons */}
+        {/* Control Action Buttons */}
         <div className="flex items-center justify-center gap-3">
+          {/* Reset button */}
           <button
+            type="button"
             onClick={() => handleSelectPreset(selectedMinutes)}
             title="Reset timer"
-            className="p-3 rounded-2xl transition hover:opacity-80 border"
-            style={{
-              backgroundColor: 'var(--th-surface-container)',
-              borderColor: 'var(--th-border)',
-            }}
+            className="btn-ghost py-2.5 px-3.5 rounded-lg cursor-pointer"
           >
-            🔄
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+              restart_alt
+            </span>
           </button>
 
+          {/* Primary Play/Pause Toggle */}
           <button
+            type="button"
             onClick={() => setIsActive(!isActive)}
-            className="px-8 py-3 rounded-2xl font-bold shadow-lg transition flex items-center gap-2 transform active:scale-95"
-            style={{
-              backgroundColor: isActive ? '#f59e0b' : 'var(--th-primary)',
-              color: '#ffffff',
-            }}
+            className="btn-primary py-2.5 px-6 rounded-lg cursor-pointer min-w-[150px]"
           >
-            <span>{isActive ? '⏸ Pause' : '▶ Start Focus'}</span>
+            <span className="material-symbols-outlined icon-fill" style={{ fontSize: '18px' }}>
+              {isActive ? 'pause' : 'play_arrow'}
+            </span>
+            <span>{isActive ? 'Pause' : 'Start Focus'}</span>
           </button>
 
+          {/* Preview chime test */}
           <button
+            type="button"
             onClick={playFocusBell}
-            title="Test focus chime"
-            className="p-3 rounded-2xl transition hover:opacity-80 border"
-            style={{
-              backgroundColor: 'var(--th-surface-container)',
-              borderColor: 'var(--th-border)',
-            }}
+            title="Preview completion bell"
+            className="btn-ghost py-2.5 px-3.5 rounded-lg cursor-pointer"
           >
-            🔔
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+              volume_up
+            </span>
           </button>
         </div>
 
-        {/* Direct Milestone Completion Button */}
-        <div className="mt-6 pt-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderColor: 'var(--th-border)' }}>
-          <div className="text-xs opacity-60 text-center sm:text-left">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono">Space</kbd> to toggle,{' '}
-            <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono">Esc</kbd> to close.
-          </div>
+        {/* Modal Footer / Fast Milestone Completion */}
+        <div className="mt-6 pt-4 border-t border-[var(--th-outline-variant)] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p
+            style={{
+              fontFamily: 'Hanken Grotesk, sans-serif',
+              fontSize: '11px',
+              color: 'var(--th-muted)',
+            }}
+          >
+            Press <kbd className="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-[10px]">Space</kbd> to toggle,{' '}
+            <kbd className="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-[10px]">Esc</kbd> to exit
+          </p>
+
           <button
+            type="button"
             onClick={handleComplete}
             disabled={isCompleting || milestone.isCompleted}
-            className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-              milestone.isCompleted
-                ? 'opacity-50 cursor-not-allowed bg-emerald-600/30 text-emerald-300'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md'
-            }`}
+            className="btn-primary py-1.5 px-3.5 text-xs rounded-lg cursor-pointer w-full sm:w-auto"
+            style={{
+              background: milestone.isCompleted ? 'var(--th-surface-container-high)' : undefined,
+              color: milestone.isCompleted ? 'var(--th-muted)' : undefined,
+              border: milestone.isCompleted ? '1px solid var(--th-outline-variant)' : undefined,
+            }}
           >
-            <span>{milestone.isCompleted ? '✓ Already Completed' : isCompleting ? 'Saving...' : '✓ Mark Complete'}</span>
+            <span className="material-symbols-outlined icon-fill" style={{ fontSize: '15px' }}>
+              check_circle
+            </span>
+            <span>{milestone.isCompleted ? 'Completed' : isCompleting ? 'Saving...' : 'Mark Done'}</span>
           </button>
         </div>
       </div>

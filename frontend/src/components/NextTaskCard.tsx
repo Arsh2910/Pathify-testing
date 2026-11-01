@@ -38,15 +38,10 @@ export default function NextTaskCard({ milestone, onComplete }: { milestone: Mil
         <button
           type="button"
           onClick={() => setFocusModalOpen(true)}
-          className="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition hover:opacity-90"
-          style={{
-            backgroundColor: 'color-mix(in srgb, var(--th-primary) 15%, transparent)',
-            color: 'var(--th-primary)',
-            border: '1px solid color-mix(in srgb, var(--th-primary) 30%, transparent)',
-          }}
+          className="btn-ghost py-1 px-2.5 text-xs flex items-center gap-1.5"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>timer</span>
-          <span>Focus Mode</span>
+          <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--th-primary-container)' }}>timer</span>
+          <span>Focus</span>
         </button>
       </div>
 
@@ -86,15 +81,10 @@ export default function NextTaskCard({ milestone, onComplete }: { milestone: Mil
         <button
           type="button"
           onClick={() => setFocusModalOpen(true)}
-          className="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border"
-          style={{
-            backgroundColor: 'var(--th-surface-container)',
-            borderColor: 'var(--th-border)',
-            color: 'var(--th-text)',
-          }}
+          className="btn-ghost flex-1 justify-center py-2.5"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>timer</span>
-          Start Timer
+          <span className="material-symbols-outlined" style={{ fontSize: '17px', color: 'var(--th-primary-container)' }}>timer</span>
+          Focus Mode
         </button>
 
         {onComplete && (
