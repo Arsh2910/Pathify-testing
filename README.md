@@ -64,8 +64,9 @@ goalweave/
 └── frontend/
     └── src/
         ├── pages/                 # IntakeForm, Dashboard, RoadmapDetail, Login, Register
-        ├── components/            # Navbar, PhaseAccordion, MilestoneCard, NextTaskCard, FocusSessionModal
+        ├── components/            # Navbar, PhaseAccordion, MilestoneCard, NextTaskCard, FocusSessionModal, CommandPalette, MilestoneQuizModal, ResourceDrawer
         ├── store/                 # Zustand store
+        ├── utils/                 # calendar export, confetti helpers
         └── api/                   # apiClient (axios instance)
 ```
 
