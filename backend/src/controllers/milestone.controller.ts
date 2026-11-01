@@ -179,6 +179,11 @@ export const createMilestone = async (
 
     const progress = await getRoadmapProgress(roadmap._id);
 
+    if (roadmap.status === "completed") {
+      roadmap.status = "active";
+      await roadmap.save();
+    }
+
     res.status(201).json({
       status: "success",
       data: {
@@ -263,16 +268,32 @@ export const getMilestoneQuiz = async (
       );
     }
 
+    if (milestone.quiz && milestone.quiz.length > 0) {
+      return res.status(200).json({
+        status: "success",
+        data: {
+          milestoneId: milestone._id,
+          quiz: milestone.quiz,
+          cached: true,
+        },
+      });
+    }
+
     const quiz = await aiService.generateQuizForMilestone(
       milestone.title,
       milestone.description,
     );
+
+    // Persist quiz to milestone for instant repeat access
+    milestone.quiz = quiz;
+    await milestone.save();
 
     res.status(200).json({
       status: "success",
       data: {
         milestoneId: milestone._id,
         quiz,
+        cached: false,
       },
     });
   } catch (error) {

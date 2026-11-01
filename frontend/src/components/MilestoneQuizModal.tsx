@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import useRoadmapStore, { Milestone, QuizQuestion } from '../store/roadmapStore';
 import { fireConfetti } from '../utils/confetti';
+import { toast } from '../store/toastStore';
 
 interface MilestoneQuizModalProps {
   milestone: Milestone;
@@ -30,10 +31,16 @@ export const MilestoneQuizModal: React.FC<MilestoneQuizModalProps> = ({
       setLoading(true);
       getMilestoneQuiz(milestone._id)
         .then((data) => setQuestions(data))
-        .catch(() => alert('Could not load quiz questions. Please try again.'))
+        .catch(() => toast.error('Could not load quiz questions. Please try again.'))
         .finally(() => setLoading(false));
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, milestone._id]);
+  }, [isOpen, milestone._id, onClose]);
 
   if (!isOpen) return null;
 
@@ -71,10 +78,11 @@ export const MilestoneQuizModal: React.FC<MilestoneQuizModalProps> = ({
     setIsCompleting(true);
     try {
       await completeMilestone(milestone._id, true);
+      toast.success('Milestone mastered and marked complete! 🎉');
       onMilestoneCompleted();
       onClose();
     } catch {
-      alert('Failed to mark milestone complete');
+      toast.error('Failed to mark milestone complete');
     } finally {
       setIsCompleting(false);
     }

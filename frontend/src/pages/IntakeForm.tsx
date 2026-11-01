@@ -99,10 +99,20 @@ export default function IntakeForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const trimmedGoal = goal.trim();
+    if (!trimmedGoal || trimmedGoal.length < 3) {
+      setError('Please provide a learning goal with at least 3 characters (not just spaces).');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      const roadmap = await createRoadmap({ goal, targetTimeframe, skillLevel, hoursPerDay });
+      const roadmap = await createRoadmap({
+        goal: trimmedGoal,
+        targetTimeframe,
+        skillLevel,
+        hoursPerDay,
+      });
       navigate(`/roadmaps/${roadmap._id}/loading`);
     } catch (err) {
       setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to create roadmap. Please try again.');

@@ -14,27 +14,58 @@ export async function createRoadmap(
 ) {
   try {
     const { goal, targetTimeframe, skillLevel, hoursPerDay } = req.body as {
-      goal: string;
-      targetTimeframe: string;
-      skillLevel: "beginner" | "intermediate" | "advanced";
-      hoursPerDay: number;
+      goal?: string;
+      targetTimeframe?: string;
+      skillLevel?: "beginner" | "intermediate" | "advanced";
+      hoursPerDay?: number;
     };
+
+    const trimmedGoal = typeof goal === "string" ? goal.trim() : "";
+    if (!trimmedGoal || trimmedGoal.length < 3 || trimmedGoal.length > 100) {
+      return next(
+        new AppError(
+          "Goal must be between 3 and 100 characters and cannot consist of blank spaces",
+          400,
+        ),
+      );
+    }
+
+    const validLevels = ["beginner", "intermediate", "advanced"];
+    const sanitizedSkillLevel =
+      typeof skillLevel === "string" && validLevels.includes(skillLevel)
+        ? skillLevel
+        : "beginner";
+
+    const parsedHours = Number(hoursPerDay);
+    if (isNaN(parsedHours) || parsedHours < 0.5 || parsedHours > 16) {
+      return next(
+        new AppError(
+          "Daily study commitment must be a number between 0.5 and 16 hours/day",
+          400,
+        ),
+      );
+    }
+
+    const trimmedTimeframe =
+      typeof targetTimeframe === "string" && targetTimeframe.trim()
+        ? targetTimeframe.trim().slice(0, 50)
+        : "1 month";
 
     const roadmap = await Roadmap.create({
       user: req.user!._id,
-      goal,
-      targetTimeframe,
-      skillLevel,
-      hoursPerDay,
+      goal: trimmedGoal,
+      targetTimeframe: trimmedTimeframe,
+      skillLevel: sanitizedSkillLevel,
+      hoursPerDay: parsedHours,
       status: "generating",
     });
 
-    const userPreferences = { skillLevel, hoursPerDay };
+    const userPreferences = { skillLevel: sanitizedSkillLevel, hoursPerDay: parsedHours };
 
     populateRoadmap(
       roadmap._id.toString(),
-      goal,
-      targetTimeframe,
+      trimmedGoal,
+      trimmedTimeframe,
       userPreferences,
     ).catch((err) => console.error("Background generation failed:", err));
 
@@ -56,17 +87,6 @@ export async function getRoadmaps(
     const roadmaps = await Roadmap.find({ user: req.user!._id }).sort(
       "-createdAt",
     );
-
-    // Sync any 100% completed roadmaps that might still have active status
-    for (const r of roadmaps) {
-      if (r.status === "active") {
-        const progress = await getRoadmapProgress(r._id);
-        if (progress.total > 0 && progress.completed === progress.total) {
-          r.status = "completed";
-          await r.save();
-        }
-      }
-    }
 
     res.status(200).json({
       status: "success",

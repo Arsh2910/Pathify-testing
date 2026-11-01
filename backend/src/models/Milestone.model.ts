@@ -1,5 +1,12 @@
 import mongoose from "mongoose";
 
+export interface IQuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation?: string;
+}
+
 export interface IMilestone {
   phase: mongoose.Types.ObjectId;
   title: string;
@@ -12,6 +19,7 @@ export interface IMilestone {
   order: number;
   notes?: string;
   completedAt?: Date;
+  quiz?: IQuizQuestion[];
 }
 
 interface IResource {
@@ -29,6 +37,16 @@ const resourceSchema = new mongoose.Schema<IResource>(
       enum: ["video", "article", "course", "book", "other"],
       default: "other",
     },
+  },
+  { _id: false },
+);
+
+const quizQuestionSchema = new mongoose.Schema<IQuizQuestion>(
+  {
+    question: { type: String, required: true },
+    options: [{ type: String, required: true }],
+    correctAnswerIndex: { type: Number, required: true },
+    explanation: { type: String, default: "" },
   },
   { _id: false },
 );
@@ -75,6 +93,10 @@ const milestoneSchema = new mongoose.Schema<IMilestone>(
     },
     completedAt: {
       type: Date,
+    },
+    quiz: {
+      type: [quizQuestionSchema],
+      default: undefined,
     },
   },
   { timestamps: true },

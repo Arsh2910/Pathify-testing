@@ -160,49 +160,92 @@ const useRoadmapStore = create<RoadmapState>((set, get) => ({
   },
 
   completeMilestone: async (milestoneId, isCompleted) => {
-    const res = await axiosClient.patch(`/milestones/${milestoneId}`, { isCompleted });
-    const { milestone, progress, streak, roadmap } = (res.data as {
-      data: {
-        milestone: Milestone;
-        progress: Progress;
-        streak: StreakInfo;
-        roadmap?: Roadmap;
-      };
-    }).data;
+    // 1. Snapshot previous state for rollback
+    const prevState = get();
+    const prevPhases = prevState.phases;
+    const prevProgress = prevState.progress;
+    const prevCurrentRoadmap = prevState.currentRoadmap;
 
+    // 2. Apply Optimistic Update immediately
     set((state) => {
-      const newStatus =
-        progress.total > 0 && progress.completed === progress.total
-          ? 'completed'
-          : 'active';
+      const updatedPhases = state.phases.map((phase) => ({
+        ...phase,
+        milestones: phase.milestones.map((m) =>
+          m._id === milestoneId ? { ...m, isCompleted } : m
+        ),
+      }));
 
-      const updatedCurrentRoadmap = state.currentRoadmap
-        ? {
-            ...state.currentRoadmap,
-            status: (roadmap?.status || newStatus) as Roadmap['status'],
-          }
-        : null;
-
-      const targetId = state.currentRoadmap?._id;
+      const newCompleted = Math.max(
+        0,
+        (state.progress?.completed || 0) + (isCompleted ? 1 : -1)
+      );
+      const total = state.progress?.total || 1;
+      const optimisticProgress: Progress = {
+        total,
+        completed: newCompleted,
+        percentage: Math.round((newCompleted / total) * 100),
+      };
 
       return {
-        phases: state.phases.map((phase) => ({
-          ...phase,
-          milestones: phase.milestones.map((m) =>
-            m._id === milestoneId ? { ...m, isCompleted: milestone.isCompleted } : m
-          ),
-        })),
-        currentRoadmap: updatedCurrentRoadmap,
-        roadmaps: state.roadmaps.map((r) =>
-          targetId && r._id === targetId
-            ? { ...r, status: (roadmap?.status || newStatus) as Roadmap['status'] }
-            : r
-        ),
-        progress,
+        phases: updatedPhases,
+        progress: optimisticProgress,
       };
     });
 
-    return { milestone, progress, streak };
+    // 3. Send network request
+    try {
+      const res = await axiosClient.patch(`/milestones/${milestoneId}`, { isCompleted });
+      const { milestone, progress, streak, roadmap } = (res.data as {
+        data: {
+          milestone: Milestone;
+          progress: Progress;
+          streak: StreakInfo;
+          roadmap?: Roadmap;
+        };
+      }).data;
+
+      set((state) => {
+        const newStatus =
+          progress.total > 0 && progress.completed === progress.total
+            ? 'completed'
+            : 'active';
+
+        const updatedCurrentRoadmap = state.currentRoadmap
+          ? {
+              ...state.currentRoadmap,
+              status: (roadmap?.status || newStatus) as Roadmap['status'],
+            }
+          : null;
+
+        const targetId = state.currentRoadmap?._id;
+
+        return {
+          phases: state.phases.map((phase) => ({
+            ...phase,
+            milestones: phase.milestones.map((m) =>
+              m._id === milestoneId ? { ...m, isCompleted: milestone.isCompleted } : m
+            ),
+          })),
+          currentRoadmap: updatedCurrentRoadmap,
+          roadmaps: state.roadmaps.map((r) =>
+            targetId && r._id === targetId
+              ? { ...r, status: (roadmap?.status || newStatus) as Roadmap['status'] }
+              : r
+          ),
+          progress,
+        };
+      });
+
+      return { milestone, progress, streak };
+    } catch (err) {
+      // 4. Rollback state on network failure
+      set({
+        phases: prevPhases,
+        progress: prevProgress,
+        currentRoadmap: prevCurrentRoadmap,
+      });
+      throw err;
+    }
   },
 
   updateMilestoneNotes: async (milestoneId: string, notes: string) => {

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useRoadmapStore from '../store/roadmapStore';
 import useAuthStore from '../store/authStore';
+import { toast } from '../store/toastStore';
 
 import type { Roadmap } from '../store/roadmapStore';
 
@@ -78,11 +79,13 @@ export default function Dashboard() {
     try {
       if (type === 'delete') {
         await deleteRoadmap(roadmap._id);
+        toast.success(`"${roadmap.goal}" deleted.`);
       } else if (type === 'abandon') {
         await abandonRoadmap(roadmap._id);
+        toast.info(`"${roadmap.goal}" marked as abandoned.`);
       }
     } catch (err) {
-      alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || `Failed to ${type} roadmap`);
+      toast.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || `Failed to ${type} roadmap`);
     } finally {
       setConfirmModal({ isOpen: false, type: 'delete', roadmap: null });
     }

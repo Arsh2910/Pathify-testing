@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import useRoadmapStore, { type Milestone, type BabyStep } from '../store/roadmapStore';
 import useAuthStore from '../store/authStore';
 import FocusSessionModal from './FocusSessionModal';
 import MilestoneQuizModal from './MilestoneQuizModal';
 import { fireConfetti, fireGrandCelebration } from '../utils/confetti';
+import { toast } from '../store/toastStore';
 
 const resourceTypeIcon = {
   video:   'play_circle',
@@ -31,8 +32,7 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
   const [loading, setLoading]                 = useState(false);
   const [showDetails, setShowDetails]         = useState(false);
   const [notes, setNotes]                     = useState(milestone.notes || '');
-  const [savingNotes, setSavingNotes]         = useState(false);
-  const [savedNotes, setSavedNotes]           = useState(false);
+  const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved'>('idle');
   const [focusModalOpen, setFocusModalOpen]   = useState(false);
   const [quizModalOpen, setQuizModalOpen]     = useState(false);
   const [babySteps, setBabySteps]             = useState<BabyStep[] | null>(null);
@@ -41,6 +41,30 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
 
   const { completeMilestone, updateMilestoneNotes, breakdownMilestone } = useRoadmapStore();
   const { updateStreak }                                                = useAuthStore();
+  const isInitialMount = useRef(true);
+
+  // Debounced auto-save for study notes (saves 750ms after user stops typing)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (notes === (milestone.notes || '')) return;
+
+    setSaveStatus('saving');
+    const timer = setTimeout(async () => {
+      try {
+        await updateMilestoneNotes(milestone._id, notes);
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2500);
+      } catch {
+        setSaveStatus('idle');
+        toast.error('Failed to auto-save notes');
+      }
+    }, 750);
+
+    return () => clearTimeout(timer);
+  }, [notes, milestone._id, milestone.notes, updateMilestoneNotes]);
 
   const handleToggle = async (e?: React.MouseEvent) => {
     if (loading) return;
@@ -53,11 +77,15 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
     try {
       const { streak, progress } = await completeMilestone(milestone._id, willBeCompleted);
       if (streak) updateStreak(streak);
+      if (willBeCompleted) {
+        toast.success(`Completed "${milestone.title}"!`);
+      }
       if (progress && progress.total > 0 && progress.completed === progress.total) {
         fireGrandCelebration();
+        toast.success('Congratulations! You completed the entire roadmap! 🏆');
       }
     } catch (err) {
-      alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to update milestone');
+      toast.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to update milestone');
     } finally {
       setLoading(false);
     }
@@ -65,17 +93,16 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
 
   const handleSaveNotes = async (e?: React.MouseEvent, appendedText?: string) => {
     if (e) e.stopPropagation();
-    if (savingNotes) return;
-    setSavingNotes(true);
     const contentToSave = appendedText !== undefined ? appendedText : notes;
+    setSaveStatus('saving');
     try {
       await updateMilestoneNotes(milestone._id, contentToSave);
-      setSavedNotes(true);
-      setTimeout(() => setSavedNotes(false), 2000);
+      setSaveStatus('saved');
+      toast.success('Notes saved!');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
-      alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to save notes');
-    } finally {
-      setSavingNotes(false);
+      setSaveStatus('idle');
+      toast.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to save notes');
     }
   };
 
@@ -91,8 +118,9 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
       const steps = await breakdownMilestone(milestone._id);
       setBabySteps(steps);
       setShowDetails(true); // make sure details are expanded
-    } catch (err) {
-      alert('Unable to generate baby steps right now. Please try again.');
+      toast.success('Baby steps generated! Small actions break procrastination.');
+    } catch {
+      toast.error('Unable to generate baby steps right now. Please try again.');
     } finally {
       setLoadingBabySteps(false);
     }
@@ -392,22 +420,39 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
                   <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>edit_note</span>
                   MY STUDY NOTES & LOG
                 </p>
-                <button
-                  type="button"
-                  onClick={(e) => handleSaveNotes(e)}
-                  disabled={savingNotes}
-                  className="px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
-                  style={{
-                    background: savedNotes ? 'var(--th-primary-container)' : 'var(--th-surface-container)',
-                    color: savedNotes ? 'white' : 'var(--th-on-surface)',
-                    border: '1px solid var(--th-outline-variant)',
-                  }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>
-                    {savedNotes ? 'check' : savingNotes ? 'refresh' : 'save'}
-                  </span>
-                  <span>{savedNotes ? 'Saved!' : savingNotes ? 'Saving...' : 'Save Note'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="text-[11px] font-medium flex items-center gap-1">
+                    {saveStatus === 'saving' && (
+                      <span className="text-amber-500 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px] animate-spin-glow">sync</span>
+                        Auto-saving...
+                      </span>
+                    )}
+                    {saveStatus === 'saved' && (
+                      <span className="text-emerald-500 font-semibold flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                        Auto-saved ✓
+                      </span>
+                    )}
+                    {saveStatus === 'idle' && (
+                      <span className="opacity-50 text-[10px]">Auto-saved as you type</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleSaveNotes(e)}
+                    disabled={saveStatus === 'saving'}
+                    className="px-2 py-0.5 rounded text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1"
+                    style={{
+                      background: 'var(--th-surface-container)',
+                      color: 'var(--th-on-surface)',
+                      border: '1px solid var(--th-outline-variant)',
+                    }}
+                    title="Force immediate save"
+                  >
+                    Save now
+                  </button>
+                </div>
               </div>
               <textarea
                 value={notes}

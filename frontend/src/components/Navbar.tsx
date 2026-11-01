@@ -4,6 +4,7 @@ import useAuthStore from '../store/authStore';
 import { useTheme } from '../hooks/useTheme';
 import axiosClient from '../api/axiosClient';
 import { validatePassword } from '../utils/passwordValidator';
+import { toast } from '../store/toastStore';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout, deleteAccount } = useAuthStore();
@@ -343,9 +344,10 @@ export default function Navbar() {
                         try {
                           await deleteAccount();
                           setShowSettings(false);
+                          toast.success('Your account has been deleted.');
                           navigate('/login');
                         } catch (err) {
-                          alert('Failed to delete account');
+                          toast.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to delete account');
                         } finally {
                           setDeletingAcc(false);
                         }

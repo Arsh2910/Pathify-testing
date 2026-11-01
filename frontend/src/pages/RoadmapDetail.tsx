@@ -6,6 +6,7 @@ import PhaseAccordion from '../components/PhaseAccordion';
 import NextTaskCard from '../components/NextTaskCard';
 import ResourceDrawer from '../components/ResourceDrawer';
 import { exportRoadmapToCalendar } from '../utils/calendarExport';
+import { toast } from '../store/toastStore';
 
 export default function RoadmapDetail() {
   const { id } = useParams();
@@ -36,9 +37,10 @@ export default function RoadmapDetail() {
     try {
       const { streak } = await completeMilestone(milestoneId, true);
       if (streak) updateStreak(streak);
+      toast.success('Milestone completed! Great momentum.');
       fetchNextTask(id!);
     } catch (err) {
-      alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to complete milestone');
+      toast.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to complete milestone');
     }
   };
 
@@ -48,12 +50,14 @@ export default function RoadmapDetail() {
     try {
       if (type === 'abandon') {
         await abandonRoadmap(id!);
+        toast.info('Roadmap marked as abandoned.');
       } else if (type === 'delete') {
         await deleteRoadmap(id!);
+        toast.success('Roadmap permanently deleted.');
         navigate('/');
       }
     } catch (err) {
-      alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || `Failed to ${type} roadmap`);
+      toast.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || `Failed to ${type} roadmap`);
     } finally {
       setActionLoading('');
       setConfirmModal({ isOpen: false, type: 'delete' });
@@ -102,6 +106,7 @@ export default function RoadmapDetail() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    toast.success('Roadmap exported to Markdown successfully!');
   };
 
   if (loading && !currentRoadmap) {

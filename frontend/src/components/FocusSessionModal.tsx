@@ -63,46 +63,89 @@ export const FocusSessionModal: React.FC<FocusSessionModalProps> = ({
     }
   };
 
+  const targetEndTimeRef = useRef<number | null>(null);
+
   const handleSelectPreset = (mins: number) => {
     setSelectedMinutes(mins);
     setSecondsRemaining(mins * 60);
     setIsActive(false);
     setSessionCompleted(false);
+    targetEndTimeRef.current = null;
+    localStorage.removeItem(`gw_focus_${milestone._id}`);
   };
 
+  // Restore existing running session if one was active for this milestone
   useEffect(() => {
     if (isOpen) {
+      try {
+        const saved = localStorage.getItem(`gw_focus_${milestone._id}`);
+        if (saved) {
+          const parsed = JSON.parse(saved) as { targetEndTime: number; selectedMinutes: number };
+          const remainingSecs = Math.round((parsed.targetEndTime - Date.now()) / 1000);
+          if (remainingSecs > 0) {
+            setSelectedMinutes(parsed.selectedMinutes);
+            setSecondsRemaining(remainingSecs);
+            targetEndTimeRef.current = parsed.targetEndTime;
+            setIsActive(true);
+            return;
+          } else {
+            localStorage.removeItem(`gw_focus_${milestone._id}`);
+          }
+        }
+      } catch {
+        // Ignore parse error
+      }
+
       setSecondsRemaining(selectedMinutes * 60);
       setIsActive(false);
       setSessionCompleted(false);
+      targetEndTimeRef.current = null;
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isOpen, milestone._id]);
 
+  // Delta-based timer (prevents tab-throttling drift and maintains exact time)
   useEffect(() => {
-    if (isActive && secondsRemaining > 0) {
+    if (isActive) {
+      if (!targetEndTimeRef.current) {
+        targetEndTimeRef.current = Date.now() + secondsRemaining * 1000;
+        localStorage.setItem(
+          `gw_focus_${milestone._id}`,
+          JSON.stringify({
+            targetEndTime: targetEndTimeRef.current,
+            selectedMinutes,
+          })
+        );
+      }
+
       timerRef.current = setInterval(() => {
-        setSecondsRemaining((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            setIsActive(false);
-            setSessionCompleted(true);
-            playFocusBell();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+        if (!targetEndTimeRef.current) return;
+        const now = Date.now();
+        const diffSeconds = Math.max(0, Math.round((targetEndTimeRef.current - now) / 1000));
+
+        setSecondsRemaining(diffSeconds);
+
+        if (diffSeconds <= 0) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          targetEndTimeRef.current = null;
+          localStorage.removeItem(`gw_focus_${milestone._id}`);
+          setIsActive(false);
+          setSessionCompleted(true);
+          playFocusBell();
+        }
+      }, 500);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
+      targetEndTimeRef.current = null;
+      localStorage.removeItem(`gw_focus_${milestone._id}`);
     }
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, secondsRemaining]);
+  }, [isActive, milestone._id, selectedMinutes]);
 
   // Keyboard accessibility: Space toggles, Esc closes
   useEffect(() => {

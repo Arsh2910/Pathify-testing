@@ -1,4 +1,5 @@
 import type { Roadmap, Phase } from '../store/roadmapStore';
+import { toast } from '../store/toastStore';
 
 /**
  * Generates and downloads an RFC 5545 compliant .ics calendar file
@@ -13,7 +14,7 @@ export function exportRoadmapToCalendar(roadmap: Roadmap, phases: Phase[]) {
   );
 
   if (allMilestones.length === 0) {
-    alert('This roadmap does not have any milestones to export yet.');
+    toast.warning('This roadmap does not have any milestones to export yet.');
     return;
   }
 
@@ -84,4 +85,5 @@ export function exportRoadmapToCalendar(roadmap: Roadmap, phases: Phase[]) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  toast.success('Calendar export (.ics) created successfully!');
 }

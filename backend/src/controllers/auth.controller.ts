@@ -94,7 +94,8 @@ export const login = async (
       return next(new AppError("Please provide email and password!", 400));
     }
 
-    const user = (await User.findOne({ email }).select(
+    const sanitizedEmail = email.toLowerCase().trim();
+    const user = (await User.findOne({ email: sanitizedEmail }).select(
       "+password",
     )) as UserDocument | null;
 
@@ -143,18 +144,19 @@ export const googleAuth = async (
       return next(new AppError("Could not retrieve email from Google", 401));
     }
 
-    const { email, name } = googleUser;
+    const normalizedEmail = googleUser.email.toLowerCase().trim();
+    const { name } = googleUser;
 
     // Find existing user or create a new one (no password for OAuth users)
-    let user = (await User.findOne({ email })) as UserDocument | null;
+    let user = (await User.findOne({ email: normalizedEmail })) as UserDocument | null;
 
     if (!user) {
       user = (await User.create({
-        email,
-        ...(name ? { name } : {}),
+        email: normalizedEmail,
+        ...(name?.trim() ? { name: name.trim() } : {}),
       })) as UserDocument;
     } else if (name && !user.name) {
-      user.name = name;
+      user.name = name.trim();
       await user.save({ validateBeforeSave: false });
     }
 
