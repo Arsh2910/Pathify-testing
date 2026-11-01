@@ -55,12 +55,29 @@ interface CreateRoadmapParams {
   hoursPerDay: number;
 }
 
+export interface BabyStep {
+  title: string;
+  action: string;
+  timeEstimate: string;
+}
+
+export interface ActivityStats {
+  currentStreak: number;
+  longestStreak: number;
+  totalCompletedMilestones: number;
+  totalRoadmaps: number;
+  completedRoadmaps: number;
+  activeRoadmaps: number;
+  activityByDate: Record<string, number>;
+}
+
 interface RoadmapState {
   roadmaps: Roadmap[];
   currentRoadmap: Roadmap | null;
   phases: Phase[];
   progress: Progress | null;
   nextTask: Milestone | null;
+  activityStats: ActivityStats | null;
   loading: boolean;
   error: string | null;
   fetchRoadmaps: () => Promise<void>;
@@ -69,6 +86,8 @@ interface RoadmapState {
   fetchNextTask: (id: string) => Promise<void>;
   completeMilestone: (milestoneId: string, isCompleted: boolean) => Promise<{ milestone: Milestone; progress: Progress; streak: StreakInfo }>;
   updateMilestoneNotes: (milestoneId: string, notes: string) => Promise<void>;
+  breakdownMilestone: (milestoneId: string) => Promise<BabyStep[]>;
+  fetchActivityStats: () => Promise<void>;
   addCustomMilestone: (roadmapId: string, phaseId: string, title: string) => Promise<void>;
   regeneratePhase: (roadmapId: string, phaseId: string) => Promise<void>;
   abandonRoadmap: (id: string) => Promise<Roadmap>;
@@ -82,6 +101,7 @@ const useRoadmapStore = create<RoadmapState>((set, get) => ({
   phases: [],
   progress: null,
   nextTask: null,
+  activityStats: null,
   loading: false,
   error: null,
 
@@ -187,6 +207,20 @@ const useRoadmapStore = create<RoadmapState>((set, get) => ({
         ),
       })),
     }));
+  },
+
+  breakdownMilestone: async (milestoneId: string) => {
+    const res = await axiosClient.post(`/milestones/${milestoneId}/breakdown`);
+    return (res.data as { data: { babySteps: BabyStep[] } }).data.babySteps;
+  },
+
+  fetchActivityStats: async () => {
+    try {
+      const res = await axiosClient.get('/roadmaps/activity-stats');
+      set({ activityStats: (res.data as { data: ActivityStats }).data });
+    } catch (err) {
+      console.error('Failed to fetch activity stats', err);
+    }
   },
 
   addCustomMilestone: async (roadmapId: string, phaseId: string, title: string) => {

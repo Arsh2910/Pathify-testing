@@ -11,6 +11,7 @@ export interface IMilestone {
   isCompleted: boolean;
   order: number;
   notes?: string;
+  completedAt?: Date;
 }
 
 interface IResource {
@@ -71,6 +72,9 @@ const milestoneSchema = new mongoose.Schema<IMilestone>(
     notes: {
       type: String,
       default: "",
+    },
+    completedAt: {
+      type: Date,
     },
   },
   { timestamps: true },

@@ -19,6 +19,8 @@ router
     roadmapController.createRoadmap,
   );
 
+router.get("/activity-stats", roadmapController.getActivityStats);
+
 router.route("/:id").get(roadmapController.getRoadmapDetails);
 router.patch(
   "/:id/phases/:phaseId/regenerate",

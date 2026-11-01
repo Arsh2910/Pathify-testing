@@ -219,7 +219,68 @@ Links:
   }
 }
 
+export interface BabyStep {
+  title: string;
+  action: string;
+  timeEstimate: string;
+}
+
+const babyStepsSchema = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      title: { type: Type.STRING },
+      action: { type: Type.STRING },
+      timeEstimate: { type: Type.STRING },
+    },
+    required: ["title", "action", "timeEstimate"],
+  },
+};
+
+export async function breakdownMilestone(
+  milestoneTitle: string,
+  milestoneDescription: string,
+  microFirstStep: string,
+): Promise<BabyStep[]> {
+  const prompt = `A learner is procrastinating or feeling overwhelmed on this learning milestone:
+Milestone: "${milestoneTitle}"
+Description: "${milestoneDescription}"
+Micro First Step: "${microFirstStep}"
+
+Deconstruct this into exactly 3 tiny, bite-sized, 2-to-5 minute baby steps that break inertia and make it effortless to begin immediately.
+Each step must have:
+1. title: concise action title
+2. action: concrete, non-intimidating practical instruction
+3. timeEstimate: e.g. "2 mins", "3 mins", "5 mins"`;
+
+  try {
+    const rawJson = await generateWithModelFallback(prompt, babyStepsSchema);
+    return JSON.parse(rawJson) as BabyStep[];
+  } catch (err) {
+    console.error("AI milestone breakdown error:", err);
+    return [
+      {
+        title: "Setup & Clear Space",
+        action: "Close distracting tabs, open your study workspace, and reread the milestone title.",
+        timeEstimate: "2 mins",
+      },
+      {
+        title: "Skim the Concept",
+        action: `Take 3 minutes to skim the starting concept for: "${microFirstStep}". Do not worry about perfection.`,
+        timeEstimate: "3 mins",
+      },
+      {
+        title: "Log One Key Takeaway",
+        action: "Write 1 sentence or code snippet in your Study Notes capturing the main idea.",
+        timeEstimate: "5 mins",
+      },
+    ];
+  }
+}
+
 export default {
   generateMilestonesForPhase,
   generateResourcesForMilestone,
+  breakdownMilestone,
 };

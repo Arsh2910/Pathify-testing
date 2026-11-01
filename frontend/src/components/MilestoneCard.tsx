@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import useRoadmapStore, { type Milestone } from '../store/roadmapStore';
+import useRoadmapStore, { type Milestone, type BabyStep } from '../store/roadmapStore';
 import useAuthStore from '../store/authStore';
+import FocusSessionModal from './FocusSessionModal';
 
 const resourceTypeIcon = {
   video:   'play_circle',
@@ -11,14 +12,18 @@ const resourceTypeIcon = {
 };
 
 export default function MilestoneCard({ milestone, isFirst }: { milestone: Milestone; isFirst: boolean; isLast?: boolean }) {
-  const [loading, setLoading]         = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  const [notes, setNotes]             = useState(milestone.notes || '');
-  const [savingNotes, setSavingNotes] = useState(false);
-  const [savedNotes, setSavedNotes]   = useState(false);
+  const [loading, setLoading]                 = useState(false);
+  const [showDetails, setShowDetails]         = useState(false);
+  const [notes, setNotes]                     = useState(milestone.notes || '');
+  const [savingNotes, setSavingNotes]         = useState(false);
+  const [savedNotes, setSavedNotes]           = useState(false);
+  const [focusModalOpen, setFocusModalOpen]   = useState(false);
+  const [babySteps, setBabySteps]             = useState<BabyStep[] | null>(null);
+  const [loadingBabySteps, setLoadingBabySteps] = useState(false);
+  const [completedBabySteps, setCompletedBabySteps] = useState<Record<number, boolean>>({});
 
-  const { completeMilestone, updateMilestoneNotes } = useRoadmapStore();
-  const { updateStreak }                            = useAuthStore();
+  const { completeMilestone, updateMilestoneNotes, breakdownMilestone } = useRoadmapStore();
+  const { updateStreak }                                                = useAuthStore();
 
   const handleToggle = async () => {
     if (loading) return;
@@ -33,12 +38,13 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
     }
   };
 
-  const handleSaveNotes = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleSaveNotes = async (e?: React.MouseEvent, appendedText?: string) => {
+    if (e) e.stopPropagation();
     if (savingNotes) return;
     setSavingNotes(true);
+    const contentToSave = appendedText !== undefined ? appendedText : notes;
     try {
-      await updateMilestoneNotes(milestone._id, notes);
+      await updateMilestoneNotes(milestone._id, contentToSave);
       setSavedNotes(true);
       setTimeout(() => setSavedNotes(false), 2000);
     } catch (err) {
@@ -46,6 +52,43 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
     } finally {
       setSavingNotes(false);
     }
+  };
+
+  const handleBreakdown = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (loadingBabySteps) return;
+    if (babySteps) {
+      setBabySteps(null); // toggle closed if already open
+      return;
+    }
+    setLoadingBabySteps(true);
+    try {
+      const steps = await breakdownMilestone(milestone._id);
+      setBabySteps(steps);
+      setShowDetails(true); // make sure details are expanded
+    } catch (err) {
+      alert('Unable to generate baby steps right now. Please try again.');
+    } finally {
+      setLoadingBabySteps(false);
+    }
+  };
+
+  const handleToggleBabyStep = (index: number) => {
+    setCompletedBabySteps((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
+  const handleAppendStepsToNotes = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!babySteps) return;
+    const formatted = babySteps
+      .map((s, i) => `[ ] Step ${i + 1} (${s.timeEstimate}): ${s.title} — ${s.action}`)
+      .join('\n');
+    const newNotes = notes.trim() ? `${notes}\n\nBaby Steps:\n${formatted}` : `Baby Steps:\n${formatted}`;
+    setNotes(newNotes);
+    handleSaveNotes(undefined, newNotes);
   };
 
   const nodeStyle = milestone.isCompleted ? 'trail-node-complete' : isFirst ? 'trail-node-active' : 'trail-node-pending';
@@ -101,9 +144,54 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
               )}
             </div>
           </div>
-          <span className="material-symbols-outlined transition-transform duration-200" style={{ color: 'var(--th-on-surface-variant)', fontSize: '16px', transform: showDetails ? 'rotate(180deg)' : 'rotate(0)', flexShrink: 0 }}>
-            expand_more
-          </span>
+          
+          <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setFocusModalOpen(true)}
+              title="Start Pomodoro Focus Session"
+              className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition opacity-90 hover:opacity-100"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--th-primary) 15%, transparent)',
+                color: 'var(--th-primary)',
+                border: '1px solid color-mix(in srgb, var(--th-primary) 30%, transparent)',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>timer</span>
+              <span>Focus</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleBreakdown}
+              disabled={loadingBabySteps}
+              title="Break down milestone into 3 effortless baby steps"
+              className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition opacity-90 hover:opacity-100"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--th-secondary) 15%, transparent)',
+                color: 'var(--th-secondary)',
+                border: '1px solid color-mix(in srgb, var(--th-secondary) 30%, transparent)',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>
+                {loadingBabySteps ? 'hourglass_top' : 'psychology'}
+              </span>
+              <span>{loadingBabySteps ? 'Thinking...' : "I'm Stuck"}</span>
+            </button>
+
+            <span
+              className="material-symbols-outlined transition-transform duration-200 cursor-pointer"
+              style={{
+                color: 'var(--th-on-surface-variant)',
+                fontSize: '18px',
+                transform: showDetails ? 'rotate(180deg)' : 'rotate(0)',
+                flexShrink: 0,
+              }}
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              expand_more
+            </span>
+          </div>
         </div>
 
         {/* Expanded */}
@@ -113,6 +201,96 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
               <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', color: 'var(--th-on-surface-variant)', lineHeight: '21px' }}>
                 {milestone.description}
               </p>
+            )}
+
+            {/* AI Inertia Breaker Baby Steps Box */}
+            {(babySteps || loadingBabySteps) && (
+              <div
+                className="p-3.5 rounded-2xl border transition-all animate-fade-in"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--th-secondary) 8%, var(--th-surface-container))',
+                  borderColor: 'color-mix(in srgb, var(--th-secondary) 25%, transparent)',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined" style={{ color: 'var(--th-secondary)', fontSize: '16px' }}>psychology</span>
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--th-secondary)' }}>
+                      Inertia Breaker: 3 Micro Baby Steps
+                    </span>
+                  </div>
+                  {babySteps && (
+                    <button
+                      type="button"
+                      onClick={handleAppendStepsToNotes}
+                      title="Save these steps to your study notes below"
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-md hover:underline flex items-center gap-1"
+                      style={{ color: 'var(--th-secondary)' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>content_paste</span>
+                      Copy to Notes
+                    </button>
+                  )}
+                </div>
+
+                {loadingBabySteps ? (
+                  <div className="flex items-center gap-2 py-3 text-xs opacity-70">
+                    <span className="animate-spin material-symbols-outlined" style={{ fontSize: '16px' }}>sync</span>
+                    <span>Deconstructing milestone into effortless 2-minute steps...</span>
+                  </div>
+                ) : babySteps && (
+                  <div className="space-y-2">
+                    {babySteps.map((step, idx) => {
+                      const isDone = !!completedBabySteps[idx];
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => handleToggleBabyStep(idx)}
+                          className="flex items-start gap-2.5 p-2 rounded-xl cursor-pointer transition"
+                          style={{
+                            backgroundColor: isDone
+                              ? 'color-mix(in srgb, var(--th-primary) 10%, transparent)'
+                              : 'var(--th-surface-container)',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isDone}
+                            onChange={() => {}} // handled by parent div
+                            className="mt-0.5 rounded cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="text-xs font-bold"
+                                style={{
+                                  textDecoration: isDone ? 'line-through' : 'none',
+                                  color: isDone ? 'var(--th-muted)' : 'var(--th-on-surface)',
+                                }}
+                              >
+                                Step {idx + 1}: {step.title}
+                              </span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-white/10 opacity-75">
+                                {step.timeEstimate}
+                              </span>
+                            </div>
+                            <p
+                              className="text-xs mt-0.5 leading-relaxed opacity-85"
+                              style={{
+                                textDecoration: isDone ? 'line-through' : 'none',
+                                color: isDone ? 'var(--th-muted)' : 'var(--th-on-surface-variant)',
+                              }}
+                            >
+                              {step.action}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             {milestone.microFirstStep && (
@@ -169,7 +347,7 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
                 </p>
                 <button
                   type="button"
-                  onClick={handleSaveNotes}
+                  onClick={(e) => handleSaveNotes(e)}
                   disabled={savingNotes}
                   className="px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
                   style={{
@@ -200,6 +378,17 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
           </div>
         )}
       </div>
+
+      {focusModalOpen && (
+        <FocusSessionModal
+          milestone={milestone}
+          isOpen={focusModalOpen}
+          onClose={() => setFocusModalOpen(false)}
+          onCompleteMilestone={async () => {
+            await handleToggle();
+          }}
+        />
+      )}
     </div>
   );
 }

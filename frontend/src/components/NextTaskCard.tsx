@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import type { Milestone } from '../store/roadmapStore';
+import FocusSessionModal from './FocusSessionModal';
 
 export default function NextTaskCard({ milestone, onComplete }: { milestone: Milestone | null; onComplete: ((id: string) => void) | null }) {
+  const [focusModalOpen, setFocusModalOpen] = useState(false);
+
   if (!milestone) {
     return (
       <div className="next-task-card">
@@ -23,11 +27,27 @@ export default function NextTaskCard({ milestone, onComplete }: { milestone: Mil
       <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
         style={{ background: 'color-mix(in srgb, var(--th-primary-container) 8%, transparent)', filter: 'blur(30px)', transform: 'translate(30%,-30%)' }} />
 
-      <div className="flex items-center gap-2 mb-4">
-        <span className="material-symbols-outlined icon-fill" style={{ color: 'var(--th-primary-container)', fontSize: '19px' }}>my_location</span>
-        <h3 style={{ fontFamily: 'Hanken Grotesk', fontSize: '10px', fontWeight: 700, color: 'var(--th-primary-container)', letterSpacing: '0.1em' }}>
-          TODAY'S FOCUS
-        </h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined icon-fill" style={{ color: 'var(--th-primary-container)', fontSize: '19px' }}>my_location</span>
+          <h3 style={{ fontFamily: 'Hanken Grotesk', fontSize: '10px', fontWeight: 700, color: 'var(--th-primary-container)', letterSpacing: '0.1em' }}>
+            TODAY'S FOCUS
+          </h3>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setFocusModalOpen(true)}
+          className="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition hover:opacity-90"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--th-primary) 15%, transparent)',
+            color: 'var(--th-primary)',
+            border: '1px solid color-mix(in srgb, var(--th-primary) 30%, transparent)',
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>timer</span>
+          <span>Focus Mode</span>
+        </button>
       </div>
 
       <h4 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600, fontSize: '17px', color: 'var(--th-on-surface)', marginBottom: '14px', lineHeight: '25px' }}>
@@ -62,11 +82,38 @@ export default function NextTaskCard({ milestone, onComplete }: { milestone: Mil
         </div>
       )}
 
-      {onComplete && (
-        <button onClick={() => onComplete(milestone._id)} className="btn-primary w-full">
-          <span className="material-symbols-outlined icon-fill" style={{ fontSize: '18px' }}>check_circle</span>
-          Mark Complete
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setFocusModalOpen(true)}
+          className="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border"
+          style={{
+            backgroundColor: 'var(--th-surface-container)',
+            borderColor: 'var(--th-border)',
+            color: 'var(--th-text)',
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>timer</span>
+          Start Timer
         </button>
+
+        {onComplete && (
+          <button onClick={() => onComplete(milestone._id)} className="btn-primary flex-1 justify-center">
+            <span className="material-symbols-outlined icon-fill" style={{ fontSize: '18px' }}>check_circle</span>
+            Mark Complete
+          </button>
+        )}
+      </div>
+
+      {focusModalOpen && (
+        <FocusSessionModal
+          milestone={milestone}
+          isOpen={focusModalOpen}
+          onClose={() => setFocusModalOpen(false)}
+          onCompleteMilestone={async (id) => {
+            if (onComplete) onComplete(id);
+          }}
+        />
       )}
     </div>
   );

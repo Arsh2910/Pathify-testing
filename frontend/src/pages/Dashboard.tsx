@@ -36,7 +36,9 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (isAuthenticated) fetchRoadmaps();
+    if (isAuthenticated) {
+      fetchRoadmaps();
+    }
   }, [isAuthenticated, fetchRoadmaps]);
 
   // Compute status counts

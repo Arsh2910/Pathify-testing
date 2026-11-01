@@ -267,3 +267,60 @@ export async function deleteRoadmap(
     next(error);
   }
 }
+
+export async function getActivityStats(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const roadmaps = await Roadmap.find({ user: req.user!._id }).select(
+      "_id status createdAt",
+    );
+    const roadmapIds = roadmaps.map((r) => r._id);
+
+    const phases = await Phase.find({ roadmap: { $in: roadmapIds } }).select(
+      "_id",
+    );
+    const phaseIds = phases.map((p) => p._id);
+
+    const completedMilestones = await Milestone.find({
+      phase: { $in: phaseIds },
+      isCompleted: true,
+    }).select("title completedAt updatedAt createdAt");
+
+    const activityMap: Record<string, number> = {};
+    for (const m of completedMilestones) {
+      const dateObj =
+        m.completedAt || (m as any).updatedAt || (m as any).createdAt;
+      if (dateObj) {
+        const dateKey = new Date(dateObj).toISOString().split("T")[0];
+        if (dateKey) {
+          activityMap[dateKey] = (activityMap[dateKey] || 0) + 1;
+        }
+      }
+    }
+
+    const totalRoadmaps = roadmaps.length;
+    const completedRoadmaps = roadmaps.filter(
+      (r) => r.status === "completed",
+    ).length;
+    const activeRoadmaps = roadmaps.filter((r) => r.status === "active").length;
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        currentStreak: req.user!.currentStreak || 0,
+        longestStreak: req.user!.longestStreak || 0,
+        totalCompletedMilestones: completedMilestones.length,
+        totalRoadmaps,
+        completedRoadmaps,
+        activeRoadmaps,
+        activityByDate: activityMap,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+

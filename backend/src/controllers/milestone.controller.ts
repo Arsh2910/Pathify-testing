@@ -41,7 +41,10 @@ export const updateMilestone = async (
     if (typeof isCompleted === "boolean") {
       milestone.isCompleted = isCompleted;
       if (isCompleted) {
+        milestone.completedAt = new Date();
         await updateStreak(req.user!);
+      } else {
+        milestone.set("completedAt", undefined);
       }
     }
 
@@ -187,3 +190,49 @@ export const createMilestone = async (
     next(error);
   }
 };
+
+export const breakdownMilestone = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const milestone = await Milestone.findById(req.params.id);
+    if (!milestone) {
+      return next(new AppError("No milestone found with that ID", 404));
+    }
+
+    const phase = await Phase.findById(milestone.phase);
+    if (!phase) return next(new AppError("Associated phase not found", 404));
+
+    const roadmap = await Roadmap.findById(phase.roadmap);
+    if (!roadmap)
+      return next(new AppError("Associated roadmap not found", 404));
+
+    if (roadmap.user.toString() !== req.user!._id.toString()) {
+      return next(
+        new AppError(
+          "You do not have permission to access this milestone",
+          403,
+        ),
+      );
+    }
+
+    const babySteps = await aiService.breakdownMilestone(
+      milestone.title,
+      milestone.description,
+      milestone.microFirstStep,
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        milestoneId: milestone._id,
+        babySteps,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
