@@ -2,6 +2,8 @@ import { useState } from 'react';
 import useRoadmapStore, { type Milestone, type BabyStep } from '../store/roadmapStore';
 import useAuthStore from '../store/authStore';
 import FocusSessionModal from './FocusSessionModal';
+import MilestoneQuizModal from './MilestoneQuizModal';
+import { fireConfetti, fireGrandCelebration } from '../utils/confetti';
 
 const resourceTypeIcon = {
   video:   'play_circle',
@@ -11,6 +13,20 @@ const resourceTypeIcon = {
   other:   'link',
 };
 
+function getMilestoneTag(title: string, desc?: string): { label: string; icon: string } {
+  const text = `${title} ${desc || ''}`.toLowerCase();
+  if (text.match(/project|build a full|portfolio|capstone|deploy/i)) {
+    return { label: 'Project', icon: 'construction' };
+  }
+  if (text.match(/code|implement|function|api|component|hook|script|program|setup/i)) {
+    return { label: 'Code', icon: 'code' };
+  }
+  if (text.match(/review|quiz|practice|exercise|interview|debug/i)) {
+    return { label: 'Practice', icon: 'psychology' };
+  }
+  return { label: 'Concept', icon: 'menu_book' };
+}
+
 export default function MilestoneCard({ milestone, isFirst }: { milestone: Milestone; isFirst: boolean; isLast?: boolean }) {
   const [loading, setLoading]                 = useState(false);
   const [showDetails, setShowDetails]         = useState(false);
@@ -18,6 +34,7 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
   const [savingNotes, setSavingNotes]         = useState(false);
   const [savedNotes, setSavedNotes]           = useState(false);
   const [focusModalOpen, setFocusModalOpen]   = useState(false);
+  const [quizModalOpen, setQuizModalOpen]     = useState(false);
   const [babySteps, setBabySteps]             = useState<BabyStep[] | null>(null);
   const [loadingBabySteps, setLoadingBabySteps] = useState(false);
   const [completedBabySteps, setCompletedBabySteps] = useState<Record<number, boolean>>({});
@@ -25,12 +42,20 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
   const { completeMilestone, updateMilestoneNotes, breakdownMilestone } = useRoadmapStore();
   const { updateStreak }                                                = useAuthStore();
 
-  const handleToggle = async () => {
+  const handleToggle = async (e?: React.MouseEvent) => {
     if (loading) return;
     setLoading(true);
+    const willBeCompleted = !milestone.isCompleted;
+    if (willBeCompleted) {
+      const rect = (e?.target as HTMLElement)?.getBoundingClientRect?.();
+      fireConfetti(rect ? rect.left + rect.width / 2 : undefined, rect ? rect.top : undefined);
+    }
     try {
-      const { streak } = await completeMilestone(milestone._id, !milestone.isCompleted);
+      const { streak, progress } = await completeMilestone(milestone._id, willBeCompleted);
       if (streak) updateStreak(streak);
+      if (progress && progress.total > 0 && progress.completed === progress.total) {
+        fireGrandCelebration();
+      }
     } catch (err) {
       alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to update milestone');
     } finally {
@@ -136,12 +161,29 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
               }}>
                 {milestone.title}
               </p>
-              {milestone.suggestedTimeBox && (
-                <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '11px', fontWeight: 600, color: 'var(--th-secondary)', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '4px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>schedule</span>
-                  {milestone.suggestedTimeBox}
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 border"
+                  style={{
+                    backgroundColor: 'var(--th-surface-container-high)',
+                    borderColor: 'var(--th-outline-variant)',
+                    color: 'var(--th-on-surface-variant)',
+                    fontFamily: 'Hanken Grotesk',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '11px' }}>
+                    {getMilestoneTag(milestone.title, milestone.description).icon}
+                  </span>
+                  {getMilestoneTag(milestone.title, milestone.description).label}
                 </span>
-              )}
+
+                {milestone.suggestedTimeBox && (
+                  <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '11px', fontWeight: 600, color: 'var(--th-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>schedule</span>
+                    {milestone.suggestedTimeBox}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           
@@ -179,6 +221,24 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
                 {loadingBabySteps ? 'sync' : 'psychology'}
               </span>
               <span>{loadingBabySteps ? 'Thinking...' : "I'm Stuck"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setQuizModalOpen(true)}
+              title="Quick 3-question active recall quiz"
+              className="py-1 px-2.5 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer hover:opacity-90"
+              style={{
+                fontFamily: 'Hanken Grotesk, sans-serif',
+                backgroundColor: 'var(--th-surface-container-high)',
+                color: 'var(--th-on-surface)',
+                border: '1px solid var(--th-outline-variant)',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--th-primary-container)' }}>
+                quiz
+              </span>
+              <span>Quiz</span>
             </button>
 
             <span
@@ -388,6 +448,17 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
           onClose={() => setFocusModalOpen(false)}
           onCompleteMilestone={async () => {
             await handleToggle();
+          }}
+        />
+      )}
+
+      {quizModalOpen && (
+        <MilestoneQuizModal
+          milestone={milestone}
+          isOpen={quizModalOpen}
+          onClose={() => setQuizModalOpen(false)}
+          onMilestoneCompleted={() => {
+            handleToggle();
           }}
         />
       )}

@@ -61,6 +61,13 @@ export interface BabyStep {
   timeEstimate: string;
 }
 
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation: string;
+}
+
 export interface ActivityStats {
   currentStreak: number;
   longestStreak: number;
@@ -87,6 +94,7 @@ interface RoadmapState {
   completeMilestone: (milestoneId: string, isCompleted: boolean) => Promise<{ milestone: Milestone; progress: Progress; streak: StreakInfo }>;
   updateMilestoneNotes: (milestoneId: string, notes: string) => Promise<void>;
   breakdownMilestone: (milestoneId: string) => Promise<BabyStep[]>;
+  getMilestoneQuiz: (milestoneId: string) => Promise<QuizQuestion[]>;
   fetchActivityStats: () => Promise<void>;
   addCustomMilestone: (roadmapId: string, phaseId: string, title: string) => Promise<void>;
   regeneratePhase: (roadmapId: string, phaseId: string) => Promise<void>;
@@ -212,6 +220,11 @@ const useRoadmapStore = create<RoadmapState>((set, get) => ({
   breakdownMilestone: async (milestoneId: string) => {
     const res = await axiosClient.post(`/milestones/${milestoneId}/breakdown`);
     return (res.data as { data: { babySteps: BabyStep[] } }).data.babySteps;
+  },
+
+  getMilestoneQuiz: async (milestoneId: string) => {
+    const res = await axiosClient.post(`/milestones/${milestoneId}/quiz`);
+    return (res.data as { data: { quiz: QuizQuestion[] } }).data.quiz;
   },
 
   fetchActivityStats: async () => {

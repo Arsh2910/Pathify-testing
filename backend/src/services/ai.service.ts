@@ -279,8 +279,91 @@ Each step must have:
   }
 }
 
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation: string;
+}
+
+const quizSchema = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      question: { type: Type.STRING },
+      options: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+      },
+      correctAnswerIndex: { type: Type.INTEGER },
+      explanation: { type: Type.STRING },
+    },
+    required: ["question", "options", "correctAnswerIndex", "explanation"],
+  },
+};
+
+export async function generateQuizForMilestone(
+  milestoneTitle: string,
+  milestoneDescription: string,
+): Promise<QuizQuestion[]> {
+  const prompt = `Create a quick 3-question multiple-choice comprehension check for this learning milestone:
+Milestone: "${milestoneTitle}"
+Description: "${milestoneDescription}"
+
+Requirements:
+- Exactly 3 practical multiple-choice questions testing core concepts or common pitfalls.
+- Each question must have exactly 4 plausible options.
+- correctAnswerIndex must be 0, 1, 2, or 3.
+- explanation must be 1-2 friendly sentences explaining why the correct answer is right.`;
+
+  try {
+    const rawJson = await generateWithModelFallback(prompt, quizSchema);
+    return JSON.parse(rawJson) as QuizQuestion[];
+  } catch (err) {
+    console.error("AI quiz generation error:", err);
+    return [
+      {
+        question: `What is the primary objective of studying "${milestoneTitle}"?`,
+        options: [
+          "To understand and apply the core principles effectively in practice",
+          "To memorize terms without implementing them",
+          "To skip fundamental concepts and jump straight to edge cases",
+          "None of the above",
+        ],
+        correctAnswerIndex: 0,
+        explanation: "Mastering practical implementation and foundational principles is key to retention.",
+      },
+      {
+        question: "When applying this milestone's concepts, which practice is recommended?",
+        options: [
+          "Relying solely on guesswork without checking documentation",
+          "Writing code or taking notes to verify comprehension through active practice",
+          "Ignoring errors or warnings",
+          "Waiting until the entire roadmap is finished before testing",
+        ],
+        correctAnswerIndex: 1,
+        explanation: "Active recall and hands-on application dramatically improve knowledge retention.",
+      },
+      {
+        question: "How can you tell you have successfully completed this milestone?",
+        options: [
+          "You can explain the core idea in your own words or build a basic example",
+          "You opened the browser tab once",
+          "You simply skimmed the titles of the resources",
+          "You memorized the exact wording of the documentation",
+        ],
+        correctAnswerIndex: 0,
+        explanation: "Being able to explain a concept simply or build a small example is proof of true mastery.",
+      },
+    ];
+  }
+}
+
 export default {
   generateMilestonesForPhase,
   generateResourcesForMilestone,
   breakdownMilestone,
+  generateQuizForMilestone,
 };
+

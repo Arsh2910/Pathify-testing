@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import CommandPalette from './components/CommandPalette';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
 import IntakeForm from './pages/IntakeForm';
@@ -26,6 +27,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Navbar />
+      <CommandPalette />
       <Routes>
         {/* Public */}
         <Route path="/login" element={<AuthPage initialTab="login" />} />

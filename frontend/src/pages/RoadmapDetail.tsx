@@ -4,6 +4,8 @@ import useRoadmapStore from '../store/roadmapStore';
 import useAuthStore from '../store/authStore';
 import PhaseAccordion from '../components/PhaseAccordion';
 import NextTaskCard from '../components/NextTaskCard';
+import ResourceDrawer from '../components/ResourceDrawer';
+import { exportRoadmapToCalendar } from '../utils/calendarExport';
 
 export default function RoadmapDetail() {
   const { id } = useParams();
@@ -185,6 +187,16 @@ export default function RoadmapDetail() {
                 Print / PDF
               </button>
 
+              {/* Add to Calendar (.ics) */}
+              <button
+                onClick={() => exportRoadmapToCalendar(currentRoadmap, phases)}
+                className="btn-ghost py-2 px-3 text-xs inline-flex items-center gap-1.5 cursor-pointer"
+                title="Add Milestones to Google Calendar or Apple Calendar (.ics)"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>calendar_month</span>
+                Sync Calendar
+              </button>
+
               {currentRoadmap.status === 'active' && (
                 <button
                   onClick={() => setConfirmModal({ isOpen: true, type: 'abandon' })}
@@ -268,6 +280,9 @@ export default function RoadmapDetail() {
           {!isAbandoned && !isGenerating && progressPercent < 100 && (
             <NextTaskCard milestone={nextTask} onComplete={nextTask ? handleCompleteNextTask : null} />
           )}
+
+          {/* Quick References Resource Hub */}
+          <ResourceDrawer roadmapId={currentRoadmap._id} phases={phases} />
         </aside>
 
         {/* Phases */}

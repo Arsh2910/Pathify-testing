@@ -92,6 +92,23 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
 
             {/* Streak Badge */}
+            {/* Quick Command Palette trigger */}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+                }}
+                className="btn-ghost py-1 px-2.5 text-xs hidden sm:flex items-center gap-1.5 cursor-pointer"
+                title="Command Palette (Ctrl + K)"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>search</span>
+                <span className="opacity-80">Search</span>
+                <kbd className="px-1 py-0.2 rounded text-[10px] font-mono opacity-50 bg-black/10 dark:bg-white/10">⌘K</kbd>
+              </button>
+            )}
+
+            {/* Streak Badge */}
             {isAuthenticated && (
               <div className="streak-badge" title={`${streak} Day Streak`}>
                 <span className="material-symbols-outlined icon-fill" style={{ fontSize: '17px' }}>

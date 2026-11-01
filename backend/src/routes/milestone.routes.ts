@@ -9,6 +9,7 @@ router.use(protect);
 router.patch("/:id", milestoneController.updateMilestone);
 router.post("/:id/resources/refresh", milestoneController.refreshMilestoneResources);
 router.post("/:id/breakdown", milestoneController.breakdownMilestone);
+router.post("/:id/quiz", milestoneController.getMilestoneQuiz);
 router.post("/phases/:phaseId", milestoneController.createMilestone);
 
 export default router;
