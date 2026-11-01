@@ -64,13 +64,12 @@ goalweave/
 └── frontend/
     └── src/
         ├── pages/                 # IntakeForm, Dashboard, RoadmapDetail, Login, Register
-        ├── components/            # Navbar, PhaseAccordion, MilestoneCard, NextTaskCard
+        ├── components/            # Navbar, PhaseAccordion, MilestoneCard, NextTaskCard, FocusSessionModal
         ├── store/                 # Zustand store
         └── api/                   # apiClient (axios instance)
 ```
 
 ---
-
 ## Data model
 
 ```
