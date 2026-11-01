@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { validatePassword } from "../utils/passwordValidator";
 
 export interface IUser {
   name?: string | undefined;
@@ -41,8 +42,16 @@ const userSchema = new mongoose.Schema<IUser, UserModel, IUserMethods>(
     password: {
       type: String,
       required: false, // not required for Google OAuth users
-      minlength: 6,
       select: false,
+      validate: {
+        validator: function (val: string) {
+          if (!val) return true;
+          return validatePassword(val).isValid;
+        },
+        message: function (props: { value: string }) {
+          return validatePassword(props.value).message || "Invalid password";
+        },
+      },
     },
     passwordResetToken: {
       type: String,

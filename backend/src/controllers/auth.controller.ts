@@ -8,6 +8,7 @@ import AppError from "../utils/appError";
 import type { NextFunction, Request, Response } from "express";
 import type { UserDocument } from "../models/User.model";
 import { sendPasswordResetEmail } from "../services/email.service";
+import { validatePassword } from "../utils/passwordValidator";
 
 const signToken = (id: string): string => {
   const options: jwt.SignOptions = {
@@ -52,14 +53,23 @@ export const register = async (
       password: string;
     };
 
-    const existingUser = await User.findOne({ email });
+    if (!email) {
+      return next(new AppError("Email is required", 400));
+    }
+
+    const pwCheck = validatePassword(password);
+    if (!pwCheck.isValid) {
+      return next(new AppError(pwCheck.message!, 400));
+    }
+
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
     if (existingUser) {
       return next(new AppError("Email already in use", 400));
     }
 
     const newUser = await User.create({
       ...(name?.trim() ? { name: name.trim() } : {}),
-      email,
+      email: email.toLowerCase().trim(),
       password,
     });
 
@@ -228,6 +238,11 @@ export const resetPassword = async (
       );
     }
 
+    const pwCheck = validatePassword(password);
+    if (!pwCheck.isValid) {
+      return next(new AppError(pwCheck.message!, 400));
+    }
+
     // Hash the token entered by the user
     const hashedToken = crypto
       .createHash("sha256")
@@ -314,6 +329,17 @@ export const updatePassword = async (
     if (!currentPassword || !newPassword) {
       return next(
         new AppError("Please provide current and new password", 400),
+      );
+    }
+
+    const pwCheck = validatePassword(newPassword);
+    if (!pwCheck.isValid) {
+      return next(new AppError(pwCheck.message!, 400));
+    }
+
+    if (currentPassword === newPassword) {
+      return next(
+        new AppError("New password must be different from current password", 400),
       );
     }
 

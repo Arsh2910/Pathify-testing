@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import useAuthStore from "../store/authStore";
 import { fireConfetti } from "../utils/confetti";
+import { validatePassword } from "../utils/passwordValidator";
 
 interface AuthPageProps {
   initialTab?: "login" | "register" | "forgot" | "reset";
@@ -129,9 +130,24 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
 
   const passwordStrength = (() => {
     if (!newPassword) return { score: 0, label: "", color: "" };
+    const trimmed = newPassword.trim();
+    if (!trimmed || newPassword.startsWith(" ") || newPassword.endsWith(" ")) {
+      return {
+        score: 1,
+        label: "Invalid (Spaces)",
+        color: "var(--th-error, #ef4444)",
+      };
+    }
+    if (trimmed.length < 6) {
+      return {
+        score: 1,
+        label: "Too Short",
+        color: "var(--th-error, #ef4444)",
+      };
+    }
     let score = 0;
-    if (newPassword.length >= 6) score += 1;
-    if (newPassword.length >= 8) score += 1;
+    if (trimmed.length >= 6) score += 1;
+    if (trimmed.length >= 8) score += 1;
     if (/[0-9]/.test(newPassword)) score += 1;
     if (/[^A-Za-z0-9]/.test(newPassword)) score += 1;
 
@@ -182,12 +198,13 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
 
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
-    if (regPassword !== regConfirmPassword) {
-      setError("Passwords do not match. Please ensure both passwords match.");
+    const pwCheck = validatePassword(regPassword);
+    if (!pwCheck.isValid) {
+      setError(pwCheck.message!);
       return;
     }
-    if (regPassword.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (regPassword !== regConfirmPassword) {
+      setError("Passwords do not match. Please ensure both passwords match.");
       return;
     }
 
@@ -195,7 +212,7 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
     setError("");
     setSuccessMsg("");
     try {
-      await register(regEmail, regPassword, regName);
+      await register(regEmail.toLowerCase().trim(), regPassword, regName);
       navigate("/");
     } catch (err) {
       setError(
@@ -269,12 +286,13 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
 
   const handleResetPassword = async (e: FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirmNewPassword) {
-      setError("New passwords do not match.");
+    const pwCheck = validatePassword(newPassword);
+    if (!pwCheck.isValid) {
+      setError(pwCheck.message!);
       return;
     }
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (newPassword !== confirmNewPassword) {
+      setError("New passwords do not match.");
       return;
     }
 

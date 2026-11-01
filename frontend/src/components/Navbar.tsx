@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import { useTheme } from '../hooks/useTheme';
 import axiosClient from '../api/axiosClient';
+import { validatePassword } from '../utils/passwordValidator';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout, deleteAccount } = useAuthStore();
@@ -28,12 +29,17 @@ export default function Navbar() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    const pwCheck = validatePassword(newPassword);
+    if (!pwCheck.isValid) {
+      setPwError(pwCheck.message!);
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setPwError('New passwords do not match');
       return;
     }
-    if (newPassword.length < 6) {
-      setPwError('New password must be at least 6 characters long');
+    if (currentPassword === newPassword) {
+      setPwError('New password must be different from current password');
       return;
     }
 
