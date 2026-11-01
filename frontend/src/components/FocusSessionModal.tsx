@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Milestone } from '../store/roadmapStore';
 
 interface FocusSessionModalProps {
@@ -150,14 +151,18 @@ export const FocusSessionModal: React.FC<FocusSessionModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+  const modalJSX = (
+    <div
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto"
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-lg p-6 sm:p-7 rounded-2xl shadow-2xl relative animate-scale-in"
+        className="w-full max-w-lg p-6 sm:p-7 rounded-2xl shadow-2xl relative animate-scale-in my-auto"
         style={{
           background: 'var(--th-surface-container)',
           border: '1px solid var(--th-outline-variant)',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[var(--th-outline-variant)]">
@@ -484,6 +489,8 @@ export const FocusSessionModal: React.FC<FocusSessionModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalJSX, document.body) : null;
 };
 
 export default FocusSessionModal;

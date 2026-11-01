@@ -187,78 +187,63 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
             </div>
           </div>
           
-          <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => setFocusModalOpen(true)}
-              title="Start Pomodoro Focus Session"
-              className="py-1 px-2.5 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer hover:opacity-90"
-              style={{
-                fontFamily: 'Hanken Grotesk, sans-serif',
-                backgroundColor: 'var(--th-surface-container-high)',
-                color: 'var(--th-on-surface)',
-                border: '1px solid var(--th-outline-variant)',
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--th-primary-container)' }}>timer</span>
-              <span>Focus</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleBreakdown}
-              disabled={loadingBabySteps}
-              title="Break down milestone into 3 effortless baby steps"
-              className="py-1 px-2.5 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer hover:opacity-90"
-              style={{
-                fontFamily: 'Hanken Grotesk, sans-serif',
-                backgroundColor: 'var(--th-surface-container-high)',
-                color: 'var(--th-on-surface)',
-                border: '1px solid var(--th-outline-variant)',
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--th-secondary)' }}>
-                {loadingBabySteps ? 'sync' : 'psychology'}
-              </span>
-              <span>{loadingBabySteps ? 'Thinking...' : "I'm Stuck"}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setQuizModalOpen(true)}
-              title="Quick 3-question active recall quiz"
-              className="py-1 px-2.5 rounded-md text-xs font-semibold flex items-center gap-1 transition cursor-pointer hover:opacity-90"
-              style={{
-                fontFamily: 'Hanken Grotesk, sans-serif',
-                backgroundColor: 'var(--th-surface-container-high)',
-                color: 'var(--th-on-surface)',
-                border: '1px solid var(--th-outline-variant)',
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--th-primary-container)' }}>
-                quiz
-              </span>
-              <span>Quiz</span>
-            </button>
-
+          <div className="flex items-center gap-1 flex-shrink-0">
             <span
-              className="material-symbols-outlined transition-transform duration-200 cursor-pointer"
+              className="material-symbols-outlined transition-transform duration-200"
               style={{
                 color: 'var(--th-on-surface-variant)',
-                fontSize: '18px',
+                fontSize: '20px',
                 transform: showDetails ? 'rotate(180deg)' : 'rotate(0)',
                 flexShrink: 0,
               }}
-              onClick={() => setShowDetails(!showDetails)}
             >
               expand_more
             </span>
           </div>
         </div>
 
-        {/* Expanded */}
+        {/* Expanded Details */}
         {showDetails && (
           <div className="mt-4 pt-4 space-y-4" style={{ borderTop: '1px solid var(--th-outline-variant)' }}>
+            
+            {/* Dedicated Action Toolbar */}
+            <div className="flex items-center gap-2 flex-wrap pb-1" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => setFocusModalOpen(true)}
+                title="Start Pomodoro Focus Session on this milestone"
+                className="btn-primary py-1.5 px-3.5 text-xs rounded-lg cursor-pointer flex items-center gap-1.5 shadow-sm"
+              >
+                <span className="material-symbols-outlined icon-fill" style={{ fontSize: '15px' }}>timer</span>
+                <span>Focus Session</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleBreakdown}
+                disabled={loadingBabySteps}
+                title="Break down milestone into 3 effortless baby steps"
+                className="btn-ghost py-1.5 px-3 text-xs rounded-lg cursor-pointer flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '15px', color: 'var(--th-secondary)' }}>
+                  {loadingBabySteps ? 'sync' : 'psychology'}
+                </span>
+                <span>{loadingBabySteps ? 'Breaking down...' : "I'm Stuck"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setQuizModalOpen(true)}
+                title="Quick 3-question active recall quiz"
+                className="btn-ghost py-1.5 px-3 text-xs rounded-lg cursor-pointer flex items-center gap-1.5"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '15px', color: 'var(--th-primary-container)' }}>
+                  quiz
+                </span>
+                <span>Comprehension Quiz</span>
+              </button>
+            </div>
+
             {milestone.description && (
               <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', color: 'var(--th-on-surface-variant)', lineHeight: '21px' }}>
                 {milestone.description}
