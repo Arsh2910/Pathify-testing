@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 
-const STORAGE_KEY = 'trailhead_theme';
+const STORAGE_KEY = 'goalweave_theme';
 
 export function useTheme() {
   const [isDark, setIsDark] = useState(() => {
     // Default to light (matching Stitch's class="light" default)
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored =
+      localStorage.getItem(STORAGE_KEY) ||
+      localStorage.getItem('trailhead_theme');
     return stored === 'dark';
   });
 

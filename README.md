@@ -1,9 +1,9 @@
 
-# Trailhead
+# GoalWeave
 
 **Focus on what matters.**
 
-Trailhead is an AI-powered learning roadmap generator built to help people beat procrastination when starting something new. Tell it what you want to learn, and it breaks the goal down into phases and bite-sized, actionable milestones — each with a tiny first step, a "why now" motivational nudge, and curated learning resources.
+GoalWeave is an AI-powered learning roadmap generator built to help people beat procrastination when starting something new. Tell it what you want to learn, and it breaks the goal down into phases and bite-sized, actionable milestones — each with a tiny first step, a "why now" motivational nudge, and curated learning resources.
 
 Built as a final year major project.
 
@@ -12,7 +12,7 @@ Built as a final year major project.
 ## How it works
 
 1. You enter a learning goal (e.g. _"learn Python"_), a target timeframe, your skill level, and how many hours per day you can commit.
-2. Trailhead picks a structural template for your goal (coding, language learning, or a general fallback) and personalizes it phase by phase using Google's Gemini AI.
+2. GoalWeave picks a structural template for your goal (coding, language learning, or a general fallback) and personalizes it phase by phase using Google's Gemini AI.
 3. Each phase is broken into milestones — with a description, a **micro first step** (the smallest possible action to beat activation-energy procrastination), a **"why now"** motivational line, a time estimate, and relevant resources (videos, articles, courses).
 4. You check milestones off as you complete them, track your overall progress, and build a daily streak.
 
@@ -49,7 +49,7 @@ Built as a final year major project.
 ## Project structure
 
 ```
-trailhead/
+goalweave/
 ├── backend/
 │   └── src/
 │       ├── server.ts              # entry point

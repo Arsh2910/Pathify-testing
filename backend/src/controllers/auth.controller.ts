@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import User from "../models/User.model";
 import jwt from "jsonwebtoken";
 import AppError from "../utils/appError";
@@ -20,9 +21,11 @@ const createSendToken = (
 ) => {
   const token = signToken(user._id.toString());
 
-  // Remove the password from the response without mutating the document.
+  // Remove the password and reset fields from the response without mutating the document.
   const safeUser = user.toObject();
   delete safeUser.password;
+  delete safeUser.passwordResetToken;
+  delete safeUser.passwordResetExpires;
 
   res.status(statusCode).json({
     status: "success",
@@ -39,7 +42,11 @@ export const register = async (
   next: NextFunction,
 ) => {
   try {
-    const { email, password } = req.body as { email: string; password: string };
+    const { name, email, password } = req.body as {
+      name?: string;
+      email: string;
+      password: string;
+    };
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -47,6 +54,7 @@ export const register = async (
     }
 
     const newUser = await User.create({
+      ...(name?.trim() ? { name: name.trim() } : {}),
       email,
       password,
     });
@@ -112,20 +120,202 @@ export const googleAuth = async (
       return next(new AppError("Failed to verify Google token", 401));
     }
 
-    const googleUser = (await googleRes.json()) as { email?: string };
+    const googleUser = (await googleRes.json()) as {
+      email?: string;
+      name?: string;
+    };
 
     if (!googleUser.email) {
       return next(new AppError("Could not retrieve email from Google", 401));
     }
 
-    const { email } = googleUser;
+    const { email, name } = googleUser;
 
     // Find existing user or create a new one (no password for OAuth users)
     let user = (await User.findOne({ email })) as UserDocument | null;
 
     if (!user) {
-      user = (await User.create({ email })) as UserDocument;
+      user = (await User.create({
+        email,
+        ...(name ? { name } : {}),
+      })) as UserDocument;
+    } else if (name && !user.name) {
+      user.name = name;
+      await user.save({ validateBeforeSave: false });
     }
+
+    createSendToken(user, 200, res);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Forgot Password — Generates 6-digit reset code, valid for 15 minutes
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body as { email?: string };
+
+    if (!email) {
+      return next(new AppError("Please provide your email address", 400));
+    }
+
+    const user = (await User.findOne({
+      email: email.toLowerCase().trim(),
+    })) as UserDocument | null;
+
+    if (!user) {
+      // Security best practice: don't reveal email non-existence, but confirm attempt
+      return res.status(200).json({
+        status: "success",
+        message:
+          "If an account with that email exists, a 6-digit reset code has been generated.",
+      });
+    }
+
+    // Generate reset code and save expiry
+    const resetCode = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    // In a production email setup, we would send an email here.
+    // For seamless local/testing experience, we log the code to console
+    // and also supply it in the JSON response so the user can easily reset immediately.
+    console.log(
+      `[GoalWeave Auth] Password reset code for ${user.email}: ${resetCode}`,
+    );
+
+    res.status(200).json({
+      status: "success",
+      message:
+        "Password reset code generated successfully. Valid for 15 minutes.",
+      resetCode, // convenient for dev/demo testing
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Reset Password — Verifies 6-digit reset code and sets new password
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, token, password } = req.body as {
+      email?: string;
+      token?: string;
+      password?: string;
+    };
+
+    if (!email || !token || !password) {
+      return next(
+        new AppError("Email, reset code, and new password are required", 400),
+      );
+    }
+
+    // Hash the token entered by the user
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token.trim())
+      .digest("hex");
+
+    // Find user with matching token and valid expiry
+    const user = (await User.findOne({
+      email: email.toLowerCase().trim(),
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    })) as UserDocument | null;
+
+    if (!user) {
+      return next(
+        new AppError(
+          "Reset code is invalid or has expired. Please request a new one.",
+          400,
+        ),
+      );
+    }
+
+    // Set new password
+    user.password = password;
+    user.set("passwordResetToken", undefined);
+    user.set("passwordResetExpires", undefined);
+    await user.save();
+
+    // Log the user in directly with new token
+    createSendToken(user, 200, res);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get Current User Profile (e.g. for session restoration / verification)
+export const getMe = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    if (!req.user) {
+      return next(new AppError("You are not logged in!", 401));
+    }
+
+    const user = (await User.findById(req.user._id)) as UserDocument | null;
+    if (!user) {
+      return next(new AppError("User not found", 404));
+    }
+
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    delete safeUser.passwordResetToken;
+    delete safeUser.passwordResetExpires;
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        user: safeUser,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update Password (for authenticated users)
+export const updatePassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    if (!req.user) {
+      return next(new AppError("You are not logged in!", 401));
+    }
+
+    const { currentPassword, newPassword } = req.body as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+
+    if (!currentPassword || !newPassword) {
+      return next(
+        new AppError("Please provide current and new password", 400),
+      );
+    }
+
+    const user = (await User.findById(req.user._id).select(
+      "+password",
+    )) as UserDocument | null;
+
+    if (!user || !(await user.comparePassword(currentPassword, user.password!))) {
+      return next(new AppError("Your current password is incorrect", 401));
+    }
+
+    user.password = newPassword;
+    await user.save();
 
     createSendToken(user, 200, res);
   } catch (err) {

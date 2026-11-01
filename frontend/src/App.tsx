@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import AuthPage from './pages/AuthPage';
@@ -15,12 +15,23 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  const { token, checkAuth } = useAuthStore();
+
+  useEffect(() => {
+    if (token) {
+      checkAuth();
+    }
+  }, [token, checkAuth]);
+
   return (
     <BrowserRouter>
       <Navbar />
       <Routes>
         {/* Public */}
-        <Route path="/login" element={<AuthPage />} />
+        <Route path="/login" element={<AuthPage initialTab="login" />} />
+        <Route path="/register" element={<AuthPage initialTab="register" />} />
+        <Route path="/forgot-password" element={<AuthPage initialTab="forgot" />} />
+        <Route path="/reset-password" element={<AuthPage initialTab="reset" />} />
 
         {/* Protected */}
         <Route

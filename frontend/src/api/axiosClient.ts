@@ -16,7 +16,9 @@ const axiosClient = axios.create({
 
 // Attach JWT from localStorage
 axiosClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('trailhead_token');
+  const token =
+    localStorage.getItem('goalweave_token') ||
+    localStorage.getItem('trailhead_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -28,6 +30,8 @@ axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      localStorage.removeItem('goalweave_token');
+      localStorage.removeItem('goalweave_user');
       localStorage.removeItem('trailhead_token');
       localStorage.removeItem('trailhead_user');
       // Avoid circular import by checking window.location

@@ -24,7 +24,7 @@ export default function Navbar() {
             className="material-symbols-outlined icon-fill"
             style={{ color: 'var(--th-primary-container)', fontSize: '26px' }}
           >
-            hiking
+            hub
           </span>
           <span
             style={{
@@ -35,7 +35,7 @@ export default function Navbar() {
               letterSpacing: '-0.02em',
             }}
           >
-            Trailhead
+            GoalWeave
           </span>
         </Link>
 
@@ -75,7 +75,7 @@ export default function Navbar() {
                   fontFamily: 'Hanken Grotesk, sans-serif',
                 }}
               >
-                {user?.email}
+                {user?.name ? `${user.name} (${user.email})` : user?.email}
               </span>
               <button onClick={handleLogout} className="btn-ghost py-2 px-3 text-sm">
                 Logout

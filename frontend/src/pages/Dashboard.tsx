@@ -28,13 +28,13 @@ export default function Dashboard() {
       <div className="page-bg min-h-screen flex items-center justify-center px-4 pt-20">
         <div className="text-center animate-fade-in max-w-md">
           <span className="material-symbols-outlined icon-fill" style={{ color: 'var(--th-primary-container)', fontSize: '64px', display: 'block', marginBottom: '20px' }}>
-            hiking
+            hub
           </span>
           <h1 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: '32px', color: 'var(--th-on-surface)', letterSpacing: '-0.02em', marginBottom: '12px' }}>
-            Welcome to Trailhead
+            Welcome to GoalWeave
           </h1>
           <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '16px', color: 'var(--th-on-surface-variant)', marginBottom: '32px' }}>
-            Your AI-powered learning companion. Beat procrastination, one milestone at a time.
+            Your AI-powered goal & learning roadmap companion. Beat procrastination, one milestone at a time.
           </p>
           <div className="flex gap-4 justify-center">
             <Link to="/login" className="btn-primary">Get Started</Link>
@@ -58,7 +58,7 @@ export default function Dashboard() {
               WELCOME BACK
             </p>
             <h1 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: 'clamp(24px, 4vw, 38px)', color: 'var(--th-on-surface)', letterSpacing: '-0.02em' }}>
-              {user?.email?.split('@')[0]}
+              {user?.name || user?.email?.split('@')[0]}
             </h1>
           </div>
 

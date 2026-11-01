@@ -1,4 +1,4 @@
-# Trailhead Backend
+# GoalWeave Backend
 
 The AI-powered learning roadmap generator backend.
 
