@@ -25,6 +25,7 @@ Built as a final year major project.
 - Node.js / Express (TypeScript)
 - MongoDB + Mongoose
 - JWT authentication, bcrypt password hashing
+- Nodemailer for email services
 - Joi request validation
 - Google Gemini API (`@google/genai`) for AI-generated milestones, using structured JSON schema output
 - `helmet`, `cors`, `express-rate-limit` for security/abuse protection
