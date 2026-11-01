@@ -10,6 +10,7 @@ export interface IMilestone {
   resources: IResource[];
   isCompleted: boolean;
   order: number;
+  notes?: string;
 }
 
 interface IResource {
@@ -66,6 +67,10 @@ const milestoneSchema = new mongoose.Schema<IMilestone>(
     order: {
       type: Number,
       required: true,
+    },
+    notes: {
+      type: String,
+      default: "",
     },
   },
   { timestamps: true },

@@ -11,10 +11,14 @@ const resourceTypeIcon = {
 };
 
 export default function MilestoneCard({ milestone, isFirst }: { milestone: Milestone; isFirst: boolean; isLast?: boolean }) {
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading]         = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const { completeMilestone } = useRoadmapStore();
-  const { updateStreak }      = useAuthStore();
+  const [notes, setNotes]             = useState(milestone.notes || '');
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [savedNotes, setSavedNotes]   = useState(false);
+
+  const { completeMilestone, updateMilestoneNotes } = useRoadmapStore();
+  const { updateStreak }                            = useAuthStore();
 
   const handleToggle = async () => {
     if (loading) return;
@@ -26,6 +30,21 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
       alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to update milestone');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveNotes = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (savingNotes) return;
+    setSavingNotes(true);
+    try {
+      await updateMilestoneNotes(milestone._id, notes);
+      setSavedNotes(true);
+      setTimeout(() => setSavedNotes(false), 2000);
+    } catch (err) {
+      alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to save notes');
+    } finally {
+      setSavingNotes(false);
     }
   };
 
@@ -89,7 +108,7 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
 
         {/* Expanded */}
         {showDetails && (
-          <div className="mt-4 pt-4 space-y-3" style={{ borderTop: '1px solid var(--th-outline-variant)' }}>
+          <div className="mt-4 pt-4 space-y-4" style={{ borderTop: '1px solid var(--th-outline-variant)' }}>
             {milestone.description && (
               <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', color: 'var(--th-on-surface-variant)', lineHeight: '21px' }}>
                 {milestone.description}
@@ -116,6 +135,7 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
               </div>
             )}
 
+            {/* Resources */}
             {milestone.resources && milestone.resources.length > 0 && (
               <div>
                 <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '10px', fontWeight: 700, color: 'var(--th-muted)', letterSpacing: '0.09em', marginBottom: '8px' }}>RESOURCES</p>
@@ -139,6 +159,44 @@ export default function MilestoneCard({ milestone, isFirst }: { milestone: Miles
                 </div>
               </div>
             )}
+
+            {/* Personal Study Notes */}
+            <div className="pt-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-2">
+                <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '11px', fontWeight: 700, color: 'var(--th-primary-container)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>edit_note</span>
+                  MY STUDY NOTES & LOG
+                </p>
+                <button
+                  type="button"
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                  className="px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
+                  style={{
+                    background: savedNotes ? 'var(--th-primary-container)' : 'var(--th-surface-container)',
+                    color: savedNotes ? 'white' : 'var(--th-on-surface)',
+                    border: '1px solid var(--th-outline-variant)',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>
+                    {savedNotes ? 'check' : savingNotes ? 'refresh' : 'save'}
+                  </span>
+                  <span>{savedNotes ? 'Saved!' : savingNotes ? 'Saving...' : 'Save Note'}</span>
+                </button>
+              </div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Record key takeaways, personal code snippets, links, or hurdles..."
+                rows={2}
+                className="input-field text-xs resize-y"
+                style={{
+                  fontFamily: 'Hanken Grotesk, sans-serif',
+                  padding: '8px 10px',
+                  lineHeight: '1.4',
+                }}
+              />
+            </div>
           </div>
         )}
       </div>

@@ -16,10 +16,19 @@ export default function RoadmapDetail() {
   const { updateStreak } = useAuthStore();
   const [actionLoading, setActionLoading] = useState('');
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'abandon';
+  }>({
+    isOpen: false,
+    type: 'delete',
+  });
+
   useEffect(() => {
     fetchRoadmapDetail(id!);
     fetchNextTask(id!);
-  }, [id]);
+  }, [id, fetchRoadmapDetail, fetchNextTask]);
 
   const handleCompleteNextTask = async (milestoneId: string) => {
     try {
@@ -31,19 +40,66 @@ export default function RoadmapDetail() {
     }
   };
 
-  const handleAbandon = async () => {
-    if (!window.confirm('Abandon this roadmap?')) return;
-    setActionLoading('abandon');
-    try { await abandonRoadmap(id!); }
-    catch (err) { alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to abandon roadmap'); }
-    finally { setActionLoading(''); }
+  const handleConfirmAction = async () => {
+    const { type } = confirmModal;
+    setActionLoading(type);
+    try {
+      if (type === 'abandon') {
+        await abandonRoadmap(id!);
+      } else if (type === 'delete') {
+        await deleteRoadmap(id!);
+        navigate('/');
+      }
+    } catch (err) {
+      alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || `Failed to ${type} roadmap`);
+    } finally {
+      setActionLoading('');
+      setConfirmModal({ isOpen: false, type: 'delete' });
+    }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Permanently delete this roadmap? This cannot be undone.')) return;
-    setActionLoading('delete');
-    try { await deleteRoadmap(id!); navigate('/'); }
-    catch (err) { alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to delete roadmap'); setActionLoading(''); }
+  // Export to Markdown file
+  const handleExportMarkdown = () => {
+    if (!currentRoadmap) return;
+
+    let md = `# GoalWeave Roadmap: ${currentRoadmap.goal}\n\n`;
+    md += `- **Status**: ${currentRoadmap.status.toUpperCase()}\n`;
+    md += `- **Skill Level**: ${currentRoadmap.skillLevel}\n`;
+    md += `- **Target Timeframe**: ${currentRoadmap.targetTimeframe || 'Self-paced'}\n`;
+    md += `- **Daily Commitment**: ${currentRoadmap.hoursPerDay} hours/day\n`;
+    md += `- **Progress**: ${progress?.completed || 0} / ${progress?.total || 0} milestones completed (${progressPercent}%)\n\n`;
+    md += `---\n\n`;
+
+    phases.forEach((phase, pIdx) => {
+      md += `## Phase ${pIdx + 1}: ${phase.title}\n\n`;
+      phase.milestones.forEach((m, mIdx) => {
+        md += `### ${pIdx + 1}.${mIdx + 1} ${m.title} ${m.isCompleted ? '✅ (Completed)' : '⬜'}\n`;
+        if (m.suggestedTimeBox) md += `*Time Estimate*: ${m.suggestedTimeBox}\n\n`;
+        if (m.description) md += `${m.description}\n\n`;
+        if (m.microFirstStep) md += `> **Micro First Step**: ${m.microFirstStep}\n\n`;
+        if (m.whyNow) md += `> **Why Now**: ${m.whyNow}\n\n`;
+        if (m.notes) md += `**My Notes**: ${m.notes}\n\n`;
+        if (m.resources && m.resources.length > 0) {
+          md += `**Resources**:\n`;
+          m.resources.forEach((r) => {
+            md += `- [${r.title}](${r.link}) (${r.type})\n`;
+          });
+          md += `\n`;
+        }
+      });
+      md += `\n`;
+    });
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeName = currentRoadmap.goal.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    link.href = url;
+    link.setAttribute('download', `goalweave_${safeName}.md`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading && !currentRoadmap) {
@@ -108,19 +164,44 @@ export default function RoadmapDetail() {
           </div>
 
           {!isGenerating && (
-            <div className="flex gap-3 flex-shrink-0">
+            <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+              {/* Export Markdown */}
+              <button
+                onClick={handleExportMarkdown}
+                className="btn-ghost py-2 px-3 text-xs inline-flex items-center gap-1.5 cursor-pointer"
+                title="Download Roadmap as Markdown"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>download</span>
+                Export Markdown
+              </button>
+
+              {/* Print / Save as PDF */}
+              <button
+                onClick={() => window.print()}
+                className="btn-ghost py-2 px-3 text-xs inline-flex items-center gap-1.5 cursor-pointer"
+                title="Print or Save as PDF"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>print</span>
+                Print / PDF
+              </button>
+
               {currentRoadmap.status === 'active' && (
-                <button onClick={handleAbandon} className="btn-ghost py-2 px-4 text-sm" disabled={actionLoading === 'abandon'}>
-                  {actionLoading === 'abandon'
-                    ? <span className="material-symbols-outlined animate-spin-glow" style={{ fontSize: '16px' }}>refresh</span>
-                    : <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>pause_circle</span>}
+                <button
+                  onClick={() => setConfirmModal({ isOpen: true, type: 'abandon' })}
+                  className="btn-ghost py-2 px-3 text-xs cursor-pointer"
+                  disabled={actionLoading === 'abandon'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>pause_circle</span>
                   Abandon
                 </button>
               )}
-              <button onClick={handleDelete} className="btn-danger py-2 px-4 text-sm" disabled={actionLoading === 'delete'}>
-                {actionLoading === 'delete'
-                  ? <span className="material-symbols-outlined animate-spin-glow" style={{ fontSize: '16px' }}>refresh</span>
-                  : <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>delete</span>}
+
+              <button
+                onClick={() => setConfirmModal({ isOpen: true, type: 'delete' })}
+                className="btn-danger py-2 px-3 text-xs cursor-pointer"
+                disabled={actionLoading === 'delete'}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>delete</span>
                 Delete
               </button>
             </div>
@@ -192,6 +273,63 @@ export default function RoadmapDetail() {
           ))}
         </main>
       </div>
+
+      {/* Styled Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+          <div
+            className="w-full max-w-sm p-6 rounded-2xl shadow-2xl"
+            style={{
+              background: 'var(--th-surface-container)',
+              border: '1px solid var(--th-outline-variant)',
+            }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  fontSize: '28px',
+                  color: confirmModal.type === 'delete' ? 'var(--th-error)' : 'var(--th-primary-container)',
+                }}
+              >
+                {confirmModal.type === 'delete' ? 'delete_forever' : 'pause_circle'}
+              </span>
+              <h3 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: '18px', color: 'var(--th-on-surface)' }}>
+                {confirmModal.type === 'delete' ? 'Delete Roadmap?' : 'Abandon Roadmap?'}
+              </h3>
+            </div>
+            <p
+              className="text-sm mb-6"
+              style={{ fontFamily: 'Hanken Grotesk', color: 'var(--th-on-surface-variant)' }}
+            >
+              {confirmModal.type === 'delete'
+                ? `Are you sure you want to permanently delete "${currentRoadmap.goal}"? This action cannot be undone.`
+                : `Are you sure you want to mark "${currentRoadmap.goal}" as abandoned?`}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmModal({ isOpen: false, type: 'delete' })}
+                className="btn-ghost py-2 px-4 text-sm cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                disabled={Boolean(actionLoading)}
+                className="py-2 px-4 rounded-lg text-sm font-semibold transition-all cursor-pointer"
+                style={{
+                  background: confirmModal.type === 'delete' ? 'var(--th-error)' : 'var(--th-primary-container)',
+                  color: 'white',
+                }}
+              >
+                {actionLoading ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

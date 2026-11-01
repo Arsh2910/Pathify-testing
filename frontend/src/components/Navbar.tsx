@@ -1,93 +1,300 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import { useTheme } from '../hooks/useTheme';
+import axiosClient from '../api/axiosClient';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
   const { isDark, toggle } = useTheme();
 
+  // Settings modal state
+  const [showSettings, setShowSettings] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
+
   const handleLogout = () => {
     logout();
+    setShowSettings(false);
     navigate('/login');
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setPwError('New passwords do not match');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPwError('New password must be at least 6 characters long');
+      return;
+    }
+
+    setPwLoading(true);
+    setPwError('');
+    setPwSuccess('');
+    try {
+      await axiosClient.patch('/auth/update-password', {
+        currentPassword,
+        newPassword,
+      });
+      setPwSuccess('Password changed successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setPwSuccess(''), 3000);
+    } catch (err) {
+      setPwError(
+        (err as { response?: { data?: { message?: string } } }).response?.data
+          ?.message || 'Failed to update password. Verify current password.'
+      );
+    } finally {
+      setPwLoading(false);
+    }
   };
 
   const streak = user?.currentStreak || 0;
 
   return (
-    <nav className="glass-nav fixed top-0 left-0 right-0 z-50 h-16">
-      <div className="max-w-[1280px] mx-auto flex justify-between items-center px-4 md:px-12 h-full">
+    <>
+      <nav className="glass-nav fixed top-0 left-0 right-0 z-50 h-16">
+        <div className="max-w-[1280px] mx-auto flex justify-between items-center px-4 md:px-12 h-full">
 
-        {/* Brand */}
-        <Link to="/" className="flex items-center gap-2">
-          <span
-            className="material-symbols-outlined icon-fill"
-            style={{ color: 'var(--th-primary-container)', fontSize: '26px' }}
-          >
-            hub
-          </span>
-          <span
+          {/* Brand */}
+          <Link to="/" className="flex items-center gap-2">
+            <span
+              className="material-symbols-outlined icon-fill"
+              style={{ color: 'var(--th-primary-container)', fontSize: '26px' }}
+            >
+              hub
+            </span>
+            <span
+              style={{
+                fontFamily: 'Manrope, sans-serif',
+                fontWeight: 700,
+                fontSize: '21px',
+                color: 'var(--th-primary)',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              GoalWeave
+            </span>
+          </Link>
+
+          {/* Right-side controls */}
+          <div className="flex items-center gap-3">
+
+            {/* Streak Badge */}
+            {isAuthenticated && (
+              <div className="streak-badge" title={`${streak} Day Streak`}>
+                <span className="material-symbols-outlined icon-fill" style={{ fontSize: '17px' }}>
+                  local_fire_department
+                </span>
+                <span>{streak}</span>
+              </div>
+            )}
+
+            {/* Theme Toggle */}
+            <button
+              onClick={toggle}
+              className="theme-toggle cursor-pointer"
+              aria-label="Toggle theme"
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '19px' }}>
+                {isDark ? 'light_mode' : 'dark_mode'}
+              </span>
+            </button>
+
+            {/* Auth */}
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  style={{
+                    background: 'var(--th-surface-container)',
+                    border: '1px solid var(--th-outline-variant)',
+                  }}
+                  title="Account Settings"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--th-primary-container)' }}>
+                    account_circle
+                  </span>
+                  <span
+                    className="hidden md:inline max-w-[140px] truncate text-xs font-semibold"
+                    style={{
+                      color: 'var(--th-on-surface)',
+                      fontFamily: 'Hanken Grotesk, sans-serif',
+                    }}
+                  >
+                    {user?.name || user?.email?.split('@')[0]}
+                  </span>
+                </button>
+                <button onClick={handleLogout} className="btn-ghost py-1.5 px-3 text-xs cursor-pointer">
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link to="/login" className="btn-primary py-2 px-4 text-sm">
+                Login
+              </Link>
+            )}
+          </div>
+        </div>
+      </nav>
+
+      {/* Account Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+          <div
+            className="w-full max-w-md p-6 rounded-2xl shadow-2xl relative"
             style={{
-              fontFamily: 'Manrope, sans-serif',
-              fontWeight: 700,
-              fontSize: '21px',
-              color: 'var(--th-primary)',
-              letterSpacing: '-0.02em',
+              background: 'var(--th-surface-container)',
+              border: '1px solid var(--th-outline-variant)',
             }}
           >
-            GoalWeave
-          </span>
-        </Link>
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowSettings(false);
+                setPwError('');
+                setPwSuccess('');
+              }}
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>close</span>
+            </button>
 
-        {/* Right-side controls */}
-        <div className="flex items-center gap-3">
-
-          {/* Streak Badge */}
-          {isAuthenticated && (
-            <div className="streak-badge">
-              <span className="material-symbols-outlined icon-fill" style={{ fontSize: '17px' }}>
-                local_fire_department
+            <div className="flex items-center gap-3 mb-5">
+              <span className="material-symbols-outlined" style={{ color: 'var(--th-primary-container)', fontSize: '28px' }}>
+                manage_accounts
               </span>
-              <span>{streak}</span>
+              <div>
+                <h3 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: '18px', color: 'var(--th-on-surface)' }}>
+                  Account Settings
+                </h3>
+                <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '12px', color: 'var(--th-muted)' }}>
+                  Manage profile and security credentials
+                </p>
+              </div>
             </div>
-          )}
 
-          {/* Theme Toggle */}
-          <button
-            onClick={toggle}
-            className="theme-toggle"
-            aria-label="Toggle theme"
-            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '19px' }}>
-              {isDark ? 'light_mode' : 'dark_mode'}
-            </span>
-          </button>
-
-          {/* Auth */}
-          {isAuthenticated ? (
-            <div className="flex items-center gap-3">
-              <span
-                className="hidden md:inline"
-                style={{
-                  fontSize: '13px',
-                  color: 'var(--th-muted)',
-                  fontFamily: 'Hanken Grotesk, sans-serif',
-                }}
-              >
-                {user?.name ? `${user.name} (${user.email})` : user?.email}
-              </span>
-              <button onClick={handleLogout} className="btn-ghost py-2 px-3 text-sm">
-                Logout
-              </button>
+            {/* Profile Overview Card */}
+            <div
+              className="p-3.5 rounded-xl mb-5 space-y-1.5"
+              style={{
+                background: 'var(--th-surface-container-high)',
+                border: '1px solid var(--th-outline-variant)',
+              }}
+            >
+              <div className="flex justify-between text-xs">
+                <span style={{ color: 'var(--th-muted)' }}>Email:</span>
+                <span className="font-semibold" style={{ color: 'var(--th-on-surface)' }}>{user?.email}</span>
+              </div>
+              {user?.name && (
+                <div className="flex justify-between text-xs">
+                  <span style={{ color: 'var(--th-muted)' }}>Name:</span>
+                  <span className="font-semibold" style={{ color: 'var(--th-on-surface)' }}>{user.name}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xs">
+                <span style={{ color: 'var(--th-muted)' }}>Day Streak:</span>
+                <span className="font-semibold" style={{ color: 'var(--th-streak-color)' }}>
+                  {user?.currentStreak || 0} days (Record: {user?.longestStreak || 0})
+                </span>
+              </div>
             </div>
-          ) : (
-            <Link to="/login" className="btn-primary py-2 px-4 text-sm">
-              Login
-            </Link>
-          )}
+
+            {/* Change Password Form */}
+            <h4
+              className="text-xs font-bold uppercase tracking-wider mb-3"
+              style={{ color: 'var(--th-primary-container)', fontFamily: 'Hanken Grotesk' }}
+            >
+              Change Password
+            </h4>
+
+            {pwSuccess && (
+              <div className="p-2.5 rounded-lg mb-3 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400 text-xs">
+                {pwSuccess}
+              </div>
+            )}
+
+            {pwError && (
+              <div className="p-2.5 rounded-lg mb-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs">
+                {pwError}
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--th-on-surface)' }}>
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="input-field text-xs py-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--th-on-surface)' }}>
+                  New Password (min 6 characters)
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="input-field text-xs py-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--th-on-surface)' }}>
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="input-field text-xs py-2"
+                  required
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSettings(false)}
+                  className="btn-ghost py-1.5 px-3 text-xs cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={pwLoading}
+                  className="btn-primary py-1.5 px-4 text-xs cursor-pointer"
+                >
+                  {pwLoading ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-    </nav>
+      )}
+    </>
   );
 }

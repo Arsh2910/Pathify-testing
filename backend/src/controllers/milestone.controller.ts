@@ -12,7 +12,10 @@ export const updateMilestone = async (
   next: NextFunction,
 ) => {
   try {
-    const { isCompleted } = req.body as { isCompleted: boolean };
+    const { isCompleted, notes } = req.body as {
+      isCompleted?: boolean;
+      notes?: string;
+    };
 
     const milestone = await Milestone.findById(req.params.id);
     if (!milestone) {
@@ -35,12 +38,18 @@ export const updateMilestone = async (
       );
     }
 
-    milestone.isCompleted = isCompleted;
-    await milestone.save();
-
-    if (isCompleted) {
-      await updateStreak(req.user!);
+    if (typeof isCompleted === "boolean") {
+      milestone.isCompleted = isCompleted;
+      if (isCompleted) {
+        await updateStreak(req.user!);
+      }
     }
+
+    if (typeof notes === "string") {
+      milestone.notes = notes;
+    }
+
+    await milestone.save();
 
     const progress = await getRoadmapProgress(roadmap._id);
 
@@ -100,6 +109,62 @@ export const refreshMilestoneResources = async (
       status: "success",
       data: {
         milestone,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createMilestone = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { phaseId } = req.params;
+    const { title, description, microFirstStep, whyNow, suggestedTimeBox } =
+      req.body as {
+        title?: string;
+        description?: string;
+        microFirstStep?: string;
+        whyNow?: string;
+        suggestedTimeBox?: string;
+      };
+
+    const phase = await Phase.findById(phaseId);
+    if (!phase) return next(new AppError("Phase not found", 404));
+
+    const roadmap = await Roadmap.findById(phase.roadmap);
+    if (!roadmap) return next(new AppError("Roadmap not found", 404));
+
+    if (roadmap.user.toString() !== req.user!._id.toString()) {
+      return next(new AppError("Unauthorized", 403));
+    }
+
+    const count = await Milestone.countDocuments({ phase: phase._id });
+
+    const newMilestone = await Milestone.create({
+      phase: phase._id,
+      title: title?.trim() || "New Milestone",
+      description: description?.trim() || "Custom learning step",
+      microFirstStep:
+        microFirstStep?.trim() || "Spend 5 minutes reviewing the core concept",
+      whyNow:
+        whyNow?.trim() || "Small consistent steps lead to mastery",
+      suggestedTimeBox: suggestedTimeBox?.trim() || "30 minutes",
+      resources: [],
+      isCompleted: false,
+      order: count + 1,
+    });
+
+    const progress = await getRoadmapProgress(roadmap._id);
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        milestone: newMilestone,
+        progress,
       },
     });
   } catch (error) {

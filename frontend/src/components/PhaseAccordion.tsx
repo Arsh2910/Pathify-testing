@@ -5,7 +5,11 @@ import useRoadmapStore, { type Phase } from '../store/roadmapStore';
 export default function PhaseAccordion({ phase, roadmapId, phaseIndex }: { phase: Phase; roadmapId: string; phaseIndex: number }) {
   const [isOpen, setIsOpen] = useState(phaseIndex === 0);
   const [regenerating, setRegenerating] = useState(false);
-  const { regeneratePhase } = useRoadmapStore();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
+  const [addingMilestone, setAddingMilestone] = useState(false);
+
+  const { regeneratePhase, addCustomMilestone } = useRoadmapStore();
 
   const milestones = phase.milestones || [];
   const completedCount = milestones.filter((m) => m.isCompleted).length;
@@ -22,6 +26,21 @@ export default function PhaseAccordion({ phase, roadmapId, phaseIndex }: { phase
     finally { setRegenerating(false); }
   };
 
+  const handleCreateMilestone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMilestoneTitle.trim() || addingMilestone) return;
+    setAddingMilestone(true);
+    try {
+      await addCustomMilestone(roadmapId, phase._id, newMilestoneTitle.trim());
+      setNewMilestoneTitle('');
+      setShowAddForm(false);
+    } catch (err) {
+      alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to add milestone');
+    } finally {
+      setAddingMilestone(false);
+    }
+  };
+
   return (
     <div
       className="rounded-xl overflow-hidden mb-3"
@@ -35,7 +54,7 @@ export default function PhaseAccordion({ phase, roadmapId, phaseIndex }: { phase
       {/* Header */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-5 text-left group transition-colors duration-200"
+        className="w-full flex items-center justify-between p-5 text-left group transition-colors duration-200 cursor-pointer"
         style={{ background: 'transparent' }}
         onMouseEnter={e => e.currentTarget.style.background = 'color-mix(in srgb, var(--th-primary-container) 4%, transparent)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -48,35 +67,40 @@ export default function PhaseAccordion({ phase, roadmapId, phaseIndex }: { phase
               background: isPhaseComplete
                 ? 'color-mix(in srgb, var(--th-primary-container) 18%, transparent)'
                 : 'var(--th-surface-container)',
-              color: isPhaseComplete ? 'var(--th-primary-container)' : 'var(--th-on-surface-variant)',
-              border: `1px solid ${isPhaseComplete ? 'color-mix(in srgb, var(--th-primary-container) 35%, transparent)' : 'var(--th-outline-variant)'}`,
-              fontFamily: 'Manrope, sans-serif',
+              color: isPhaseComplete ? 'var(--th-primary)' : 'var(--th-on-surface-variant)',
             }}
           >
-            {phaseIndex + 1}
+            {isPhaseComplete ? (
+              <span className="material-symbols-outlined icon-fill" style={{ fontSize: '18px' }}>check</span>
+            ) : (
+              phaseIndex + 1
+            )}
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600, fontSize: '15px', color: 'var(--th-on-surface)', marginBottom: '5px' }}>
+            <h3 style={{
+              fontFamily: 'Manrope, sans-serif', fontWeight: 600, fontSize: '15px',
+              color: 'var(--th-on-surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
               {phase.title}
             </h3>
-            <div className="flex items-center gap-3">
-              <div className="progress-track" style={{ width: '80px' }}>
-                <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
-              </div>
-              <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--th-muted)', fontFamily: 'Hanken Grotesk' }}>
-                {completedCount}/{totalCount}
-              </span>
-            </div>
+            <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '12px', color: 'var(--th-muted)', marginTop: '2px' }}>
+              {completedCount} of {totalCount} completed
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 ml-4">
-          {/* Regenerate */}
+        <div className="flex items-center gap-4 flex-shrink-0">
+          {/* Progress % */}
+          <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', fontWeight: 600, color: 'var(--th-muted)' }}>
+            {progressPercent}%
+          </span>
+
+          {/* Regenerate button */}
           <button
             onClick={handleRegenerate}
             disabled={regenerating}
-            className="hidden group-hover:flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg transition-all duration-200"
+            className="hidden sm:inline-flex items-center gap-1.5 py-1 px-3 rounded-lg text-xs transition-opacity duration-200 cursor-pointer"
             style={{
               background: 'color-mix(in srgb, var(--th-secondary) 10%, transparent)',
               color: 'var(--th-secondary)',
@@ -115,6 +139,47 @@ export default function PhaseAccordion({ phase, roadmapId, phaseIndex }: { phase
               </div>
             </div>
           )}
+
+          {/* Add Milestone Footer */}
+          <div className="p-4 bg-black/5 dark:bg-white/5 border-t border-[var(--th-card-border)] flex items-center justify-between">
+            {showAddForm ? (
+              <form onSubmit={handleCreateMilestone} className="flex-1 flex gap-2 animate-fade-in">
+                <input
+                  type="text"
+                  placeholder="Enter milestone title (e.g., Build a quick prototype)..."
+                  value={newMilestoneTitle}
+                  onChange={(e) => setNewMilestoneTitle(e.target.value)}
+                  className="input-field py-1.5 text-xs flex-1"
+                  autoFocus
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={addingMilestone}
+                  className="btn-primary py-1.5 px-3 text-xs"
+                >
+                  {addingMilestone ? 'Adding...' : 'Add'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="btn-ghost py-1.5 px-3 text-xs"
+                >
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAddForm(true)}
+                className="text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:underline"
+                style={{ color: 'var(--th-primary-container)', fontFamily: 'Hanken Grotesk' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>add_circle</span>
+                Add Custom Milestone
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

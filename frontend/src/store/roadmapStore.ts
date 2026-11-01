@@ -17,6 +17,7 @@ export interface Milestone {
   resources: Resource[];
   isCompleted: boolean;
   order: number;
+  notes?: string;
   phase?: { title: string; order: number };
 }
 
@@ -67,6 +68,8 @@ interface RoadmapState {
   fetchRoadmapDetail: (id: string) => Promise<Roadmap>;
   fetchNextTask: (id: string) => Promise<void>;
   completeMilestone: (milestoneId: string, isCompleted: boolean) => Promise<{ milestone: Milestone; progress: Progress; streak: StreakInfo }>;
+  updateMilestoneNotes: (milestoneId: string, notes: string) => Promise<void>;
+  addCustomMilestone: (roadmapId: string, phaseId: string, title: string) => Promise<void>;
   regeneratePhase: (roadmapId: string, phaseId: string) => Promise<void>;
   abandonRoadmap: (id: string) => Promise<Roadmap>;
   deleteRoadmap: (id: string) => Promise<void>;
@@ -143,6 +146,23 @@ const useRoadmapStore = create<RoadmapState>((set, get) => ({
     }));
 
     return { milestone, progress, streak };
+  },
+
+  updateMilestoneNotes: async (milestoneId: string, notes: string) => {
+    await axiosClient.patch(`/milestones/${milestoneId}`, { notes });
+    set((state) => ({
+      phases: state.phases.map((phase) => ({
+        ...phase,
+        milestones: phase.milestones.map((m) =>
+          m._id === milestoneId ? { ...m, notes } : m
+        ),
+      })),
+    }));
+  },
+
+  addCustomMilestone: async (roadmapId: string, phaseId: string, title: string) => {
+    await axiosClient.post(`/milestones/phases/${phaseId}`, { title });
+    await get().fetchRoadmapDetail(roadmapId);
   },
 
   regeneratePhase: async (roadmapId, phaseId) => {

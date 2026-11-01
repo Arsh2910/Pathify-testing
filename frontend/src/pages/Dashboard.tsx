@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useRoadmapStore from '../store/roadmapStore';
 import useAuthStore from '../store/authStore';
@@ -15,13 +15,76 @@ const statusCls: Record<RoadmapStatus, string> = {
 };
 
 export default function Dashboard() {
-  const { roadmaps, fetchRoadmaps, loading, error } = useRoadmapStore();
+  const { roadmaps, fetchRoadmaps, loading, error, deleteRoadmap, abandonRoadmap } = useRoadmapStore();
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
+  // Search, filter, and sort state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | RoadmapStatus>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title'>('newest');
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'delete' | 'abandon';
+    roadmap: Roadmap | null;
+  }>({
+    isOpen: false,
+    type: 'delete',
+    roadmap: null,
+  });
+
   useEffect(() => {
     if (isAuthenticated) fetchRoadmaps();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchRoadmaps]);
+
+  // Compute status counts
+  const counts = useMemo(() => {
+    const res = { all: roadmaps.length, active: 0, completed: 0, abandoned: 0, generating: 0 };
+    roadmaps.forEach((r) => {
+      if (r.status in res) {
+        res[r.status as keyof typeof res]++;
+      }
+    });
+    return res;
+  }, [roadmaps]);
+
+  // Filter and sort roadmaps
+  const filteredRoadmaps = useMemo(() => {
+    return roadmaps
+      .filter((r) => {
+        const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
+        const matchesSearch =
+          r.goal.toLowerCase().includes(searchQuery.toLowerCase().trim()) ||
+          (r.skillLevel && r.skillLevel.toLowerCase().includes(searchQuery.toLowerCase().trim()));
+        return matchesStatus && matchesSearch;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'title') return a.goal.localeCompare(b.goal);
+        if (sortBy === 'oldest') {
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        }
+        // newest (default)
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      });
+  }, [roadmaps, statusFilter, searchQuery, sortBy]);
+
+  const handleConfirmAction = async () => {
+    if (!confirmModal.roadmap) return;
+    const { type, roadmap } = confirmModal;
+    try {
+      if (type === 'delete') {
+        await deleteRoadmap(roadmap._id);
+      } else if (type === 'abandon') {
+        await abandonRoadmap(roadmap._id);
+      }
+    } catch (err) {
+      alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || `Failed to ${type} roadmap`);
+    } finally {
+      setConfirmModal({ isOpen: false, type: 'delete', roadmap: null });
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -86,25 +149,86 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="mb-10">
+      {/* CTA & Controls Toolbar */}
+      <section className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Link to="/new" className="btn-primary inline-flex items-center gap-2 py-3 px-6 text-base">
           <span className="material-symbols-outlined icon-fill" style={{ fontSize: '20px' }}>add_circle</span>
           New Learning Trail
         </Link>
+
+        {/* Search bar */}
+        <div className="relative flex-1 max-w-md">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" style={{ fontSize: '20px' }}>
+            search
+          </span>
+          <input
+            type="text"
+            className="input-field pl-10 pr-8"
+            placeholder="Search roadmaps by goal or skill..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+            </button>
+          )}
+        </div>
       </section>
 
-      {/* Roadmaps */}
-      <section>
-        <div className="flex items-center justify-between mb-5">
-          <h2 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600, fontSize: '20px', color: 'var(--th-on-surface)' }}>
-            Your Roadmaps
-          </h2>
-          <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', color: 'var(--th-muted)' }}>
-            {roadmaps.length} total
-          </span>
+      {/* Status Filter Tabs & Sorter */}
+      <section className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {(['all', 'active', 'completed', 'abandoned'] as const).map((st) => (
+            <button
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer flex items-center gap-1.5"
+              style={{
+                fontFamily: 'Hanken Grotesk, sans-serif',
+                background: statusFilter === st ? 'var(--th-primary-container)' : 'var(--th-surface-container)',
+                color: statusFilter === st ? 'var(--th-on-primary)' : 'var(--th-on-surface-variant)',
+                border: '1px solid var(--th-outline-variant)',
+              }}
+            >
+              <span>{st}</span>
+              <span
+                className="px-1.5 py-0.2 rounded-full text-[10px]"
+                style={{
+                  background: statusFilter === st ? 'rgba(255,255,255,0.25)' : 'var(--th-surface-container-high)',
+                }}
+              >
+                {counts[st]}
+              </span>
+            </button>
+          ))}
         </div>
 
+        {/* Sort Select */}
+        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--th-on-surface-variant)', fontFamily: 'Hanken Grotesk' }}>
+          <span>Sort by:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="px-2.5 py-1 rounded-md text-xs cursor-pointer"
+            style={{
+              background: 'var(--th-surface-container)',
+              color: 'var(--th-on-surface)',
+              border: '1px solid var(--th-outline-variant)',
+            }}
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="title">Goal Title (A-Z)</option>
+          </select>
+        </div>
+      </section>
+
+      {/* Roadmaps Grid */}
+      <section>
         {loading && (
           <div className="flex items-center justify-center py-20 gap-3">
             <span className="material-symbols-outlined animate-spin-glow" style={{ color: 'var(--th-primary-container)', fontSize: '24px' }}>refresh</span>
@@ -118,62 +242,136 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!loading && roadmaps.length === 0 && (
+        {!loading && filteredRoadmaps.length === 0 && (
           <div
-            className="flex flex-col items-center justify-center py-20 rounded-xl"
+            className="flex flex-col items-center justify-center py-16 rounded-xl"
             style={{ border: '2px dashed var(--th-outline-variant)', background: 'var(--th-surface-container-low)' }}
           >
-            <span className="material-symbols-outlined" style={{ color: 'var(--th-outline-variant)', fontSize: '48px', marginBottom: '16px' }}>map</span>
+            <span className="material-symbols-outlined" style={{ color: 'var(--th-outline-variant)', fontSize: '48px', marginBottom: '16px' }}>
+              {searchQuery || statusFilter !== 'all' ? 'search_off' : 'map'}
+            </span>
             <p style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600, fontSize: '18px', color: 'var(--th-on-surface-variant)', marginBottom: '8px' }}>
-              No roadmaps yet
+              {searchQuery || statusFilter !== 'all' ? 'No matching roadmaps found' : 'No roadmaps yet'}
             </p>
             <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '14px', color: 'var(--th-muted)', marginBottom: '24px' }}>
-              Start your first learning trail today.
+              {searchQuery || statusFilter !== 'all' ? 'Try adjusting your search query or status filter.' : 'Start your first learning trail today.'}
             </p>
-            <Link to="/new" className="btn-primary">
-              <span className="material-symbols-outlined icon-fill" style={{ fontSize: '18px' }}>add</span>
-              Create Roadmap
-            </Link>
+            {searchQuery || statusFilter !== 'all' ? (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                }}
+                className="btn-ghost"
+              >
+                Reset Filters
+              </button>
+            ) : (
+              <Link to="/new" className="btn-primary">
+                <span className="material-symbols-outlined icon-fill" style={{ fontSize: '18px' }}>add</span>
+                Create Roadmap
+              </Link>
+            )}
           </div>
         )}
 
-        {!loading && roadmaps.length > 0 && (
+        {!loading && filteredRoadmaps.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {roadmaps.map((roadmap, index) => (
-              <RoadmapCard key={roadmap._id} roadmap={roadmap} index={index} navigate={navigate} />
+            {filteredRoadmaps.map((roadmap, index) => (
+              <RoadmapCard
+                key={roadmap._id}
+                roadmap={roadmap}
+                index={index}
+                navigate={navigate}
+                onRequestDelete={(r) => setConfirmModal({ isOpen: true, type: 'delete', roadmap: r })}
+                onRequestAbandon={(r) => setConfirmModal({ isOpen: true, type: 'abandon', roadmap: r })}
+              />
             ))}
           </div>
         )}
       </section>
+
+      {/* Styled Confirmation Modal */}
+      {confirmModal.isOpen && confirmModal.roadmap && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+          <div
+            className="w-full max-w-sm p-6 rounded-2xl shadow-2xl"
+            style={{
+              background: 'var(--th-surface-container)',
+              border: '1px solid var(--th-outline-variant)',
+            }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  fontSize: '28px',
+                  color: confirmModal.type === 'delete' ? 'var(--th-error)' : 'var(--th-primary-container)',
+                }}
+              >
+                {confirmModal.type === 'delete' ? 'delete_forever' : 'pause_circle'}
+              </span>
+              <h3 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: '18px', color: 'var(--th-on-surface)' }}>
+                {confirmModal.type === 'delete' ? 'Delete Roadmap?' : 'Abandon Roadmap?'}
+              </h3>
+            </div>
+            <p
+              className="text-sm mb-6"
+              style={{ fontFamily: 'Hanken Grotesk', color: 'var(--th-on-surface-variant)' }}
+            >
+              {confirmModal.type === 'delete'
+                ? `Are you sure you want to permanently delete "${confirmModal.roadmap.goal}"? This action cannot be undone.`
+                : `Are you sure you want to mark "${confirmModal.roadmap.goal}" as abandoned? You can still view it in the abandoned filter.`}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmModal({ isOpen: false, type: 'delete', roadmap: null })}
+                className="btn-ghost py-2 px-4 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                className="py-2 px-4 rounded-lg text-sm font-semibold transition-all cursor-pointer"
+                style={{
+                  background: confirmModal.type === 'delete' ? 'var(--th-error)' : 'var(--th-primary-container)',
+                  color: 'white',
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function RoadmapCard({ roadmap, index, navigate }: { roadmap: Roadmap; index: number; navigate: (path: string) => void }) {
-  const { deleteRoadmap, abandonRoadmap } = useRoadmapStore();
+function RoadmapCard({
+  roadmap,
+  index,
+  navigate,
+  onRequestDelete,
+  onRequestAbandon,
+}: {
+  roadmap: Roadmap;
+  index: number;
+  navigate: (path: string) => void;
+  onRequestDelete: (r: Roadmap) => void;
+  onRequestAbandon: (r: Roadmap) => void;
+}) {
   const isGenerating = roadmap.status === 'generating';
   const isAbandoned  = roadmap.status === 'abandoned';
   const isActive     = roadmap.status === 'active';
-
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm(`Delete "${roadmap.goal}"? This cannot be undone.`)) return;
-    try { await deleteRoadmap(roadmap._id); }
-    catch (err) { alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to delete roadmap'); }
-  };
-
-  const handleAbandon = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm(`Abandon "${roadmap.goal}"?`)) return;
-    try { await abandonRoadmap(roadmap._id); }
-    catch (err) { alert((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to abandon roadmap'); }
-  };
 
   return (
     <div
       className="card group cursor-pointer animate-fade-in"
       style={{
-        animationDelay: `${index * 0.07}s`,
+        animationDelay: `${index * 0.05}s`,
         padding: '1.5rem',
         border: isActive ? '1px solid color-mix(in srgb, var(--th-primary-container) 30%, transparent)' : '1px solid var(--th-card-border)',
       }}
@@ -187,13 +385,27 @@ function RoadmapCard({ roadmap, index, navigate }: { roadmap: Roadmap; index: nu
         <span className={statusCls[roadmap.status] || 'pill-active'}>{roadmap.status}</span>
         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           {isActive && (
-            <button onClick={handleAbandon} className="p-1.5 rounded-lg transition-colors"
-              style={{ background: 'var(--th-surface-container)', color: 'var(--th-on-surface-variant)' }} title="Abandon">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestAbandon(roadmap);
+              }}
+              className="p-1.5 rounded-lg transition-colors cursor-pointer"
+              style={{ background: 'var(--th-surface-container)', color: 'var(--th-on-surface-variant)' }}
+              title="Abandon"
+            >
               <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>pause_circle</span>
             </button>
           )}
-          <button onClick={handleDelete} className="p-1.5 rounded-lg transition-colors"
-            style={{ background: 'color-mix(in srgb, var(--th-error) 10%, transparent)', color: 'var(--th-error)' }} title="Delete">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRequestDelete(roadmap);
+            }}
+            className="p-1.5 rounded-lg transition-colors cursor-pointer"
+            style={{ background: 'color-mix(in srgb, var(--th-error) 10%, transparent)', color: 'var(--th-error)' }}
+            title="Delete"
+          >
             <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>delete</span>
           </button>
         </div>
