@@ -61,13 +61,13 @@ goalweave/
 │       ├── services/              # business logic (AI generation, templates, progress/streaks)
 │       ├── middlewares/           # auth, validation, error handling, rate limiting
 │       ├── validators/            # Joi schemas
-│       └── utils/                 # AppError, helpers
+│       └── utils/                 # AppError, password validation, helpers
 └── frontend/
     └── src/
         ├── pages/                 # IntakeForm, Dashboard, RoadmapDetail, Login, Register
         ├── components/            # Navbar, PhaseAccordion, MilestoneCard, NextTaskCard, FocusSessionModal, CommandPalette, MilestoneQuizModal, ResourceDrawer
         ├── store/                 # Zustand store
-        ├── utils/                 # calendar export, confetti helpers
+        ├── utils/                 # calendar export, confetti helpers, password validation
         └── api/                   # apiClient (axios instance)
 ```
 
