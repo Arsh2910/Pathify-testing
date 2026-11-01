@@ -393,6 +393,26 @@ body {
 .btn-danger:hover { background: var(--th-error-container); }
 
 /* ================================================================
+   MATERIAL SYMBOLS FONT SPEC
+   ================================================================ */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  vertical-align: middle;
+}
+
+/* ================================================================
    INPUT FIELDS
    ================================================================ */
 .input-field {
@@ -413,6 +433,34 @@ body {
 }
 .input-field::placeholder { color: var(--th-outline); }
 .input-field option { background: var(--th-surface-container-lowest); color: var(--th-on-surface); }
+
+/* Left/Right Icon padding helpers for input fields — prevent text overlapping icons */
+.input-field.pl-10,
+.input-field.pl-11,
+.input-field.pl-12,
+input.input-field.pl-10,
+input.input-field.pl-11 {
+  padding-left: 2.75rem !important;
+}
+
+.input-field.pr-10,
+.input-field.pr-11,
+.input-field.pr-12,
+input.input-field.pr-10,
+input.input-field.pr-11 {
+  padding-right: 2.75rem !important;
+}
+
+.input-field.pr-8,
+input.input-field.pr-8 {
+  padding-right: 2.25rem !important;
+}
+
+.input-field.py-2,
+input.input-field.py-2 {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
 
 /* ================================================================
    STATUS PILLS

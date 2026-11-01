@@ -800,26 +800,14 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
                   >
                     Account Email Address
                   </label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      className="input-field pl-10"
-                      placeholder="weaver@example.com"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      required
-                    />
-                    <span
-                      className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2"
-                      style={{
-                        fontSize: "19px",
-                        color: "var(--th-on-surface-variant)",
-                        pointerEvents: "none",
-                      }}
-                    >
-                      mail
-                    </span>
-                  </div>
+                  <input
+                    type="email"
+                    className="input-field"
+                    placeholder="weaver@example.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                  />
                 </div>
 
                 <button

@@ -160,12 +160,13 @@ export default function Dashboard() {
 
         {/* Search bar */}
         <div className="relative flex-1 max-w-md">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" style={{ fontSize: '20px' }}>
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" style={{ fontSize: '20px' }}>
             search
           </span>
           <input
             type="text"
-            className="input-field pl-10 pr-8"
+            className="input-field pl-11 pr-9"
+            style={{ paddingLeft: '2.75rem', paddingRight: '2.25rem' }}
             placeholder="Search roadmaps by goal or skill..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
