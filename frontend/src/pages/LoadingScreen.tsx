@@ -55,7 +55,7 @@ export default function LoadingScreen() {
                 strokeDasharray="40 240" strokeLinecap="round" opacity="0.7" />
             </svg>
             <span className="material-symbols-outlined icon-fill" style={{ color: 'var(--th-primary-container)', fontSize: '36px', zIndex: 1 }}>
-              hiking
+              hub
             </span>
           </div>
         </div>
@@ -66,10 +66,10 @@ export default function LoadingScreen() {
           fontSize: 'clamp(22px, 4vw, 30px)', color: 'var(--th-on-surface)',
           letterSpacing: '-0.02em', textAlign: 'center', marginBottom: '10px',
         }}>
-          Building your learning trail…
+          Weaving your learning roadmap…
         </h1>
         <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '15px', color: 'var(--th-on-surface-variant)', textAlign: 'center', marginBottom: '28px' }}>
-          Our AI is crafting a personalized path just for you. This takes a moment.
+          Our AI is weaving a personalized path just for you. This takes a moment.
         </p>
 
         {/* Dots */}

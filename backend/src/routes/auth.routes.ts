@@ -40,5 +40,6 @@ router.patch(
   validateRequest(updatePasswordSchema),
   authController.updatePassword,
 );
+router.delete("/account", protect, authController.deleteAccount);
 
 export default router;

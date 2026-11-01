@@ -48,10 +48,10 @@ export default function IntakeForm() {
             }}
           >
             <span className="material-symbols-outlined icon-fill" style={{ color: 'var(--th-primary-container)', fontSize: '18px' }}>
-              map
+              hub
             </span>
             <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '12px', fontWeight: 700, color: 'var(--th-primary-container)', letterSpacing: '0.1em' }}>
-              NEW LEARNING TRAIL
+              NEW LEARNING ROADMAP
             </span>
           </div>
 
@@ -94,7 +94,32 @@ export default function IntakeForm() {
                 onChange={(e) => setGoal(e.target.value)}
                 required minLength={3} maxLength={100}
               />
-              <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '12px', color: 'var(--th-muted)', marginTop: '6px' }}>
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-gray-500 mr-1">Inspiration:</span>
+                {[
+                  'Master React & Next.js',
+                  'Learn Python for AI/ML',
+                  'System Design & Microservices',
+                  'Docker & Kubernetes',
+                  'Conversational Spanish',
+                ].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setGoal(s)}
+                    className="px-2.5 py-1 rounded-full text-xs transition-colors cursor-pointer"
+                    style={{
+                      background: 'var(--th-surface-container)',
+                      color: 'var(--th-on-surface-variant)',
+                      border: '1px solid var(--th-outline-variant)',
+                      fontFamily: 'Hanken Grotesk',
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '12px', color: 'var(--th-muted)', marginTop: '8px' }}>
                 Be specific — the more detail, the better your roadmap.
               </p>
             </div>
@@ -188,9 +213,9 @@ export default function IntakeForm() {
             {/* Submit */}
             <button type="submit" className="btn-primary w-full py-4 text-base" disabled={loading}>
               {loading ? (
-                <><span className="material-symbols-outlined animate-spin-glow" style={{ fontSize: '20px' }}>refresh</span> Generating your trail...</>
+                <><span className="material-symbols-outlined animate-spin-glow" style={{ fontSize: '20px' }}>refresh</span> Weaving your roadmap...</>
               ) : (
-                <><span className="material-symbols-outlined icon-fill" style={{ fontSize: '20px' }}>auto_awesome</span> Build My Learning Trail</>
+                <><span className="material-symbols-outlined icon-fill" style={{ fontSize: '20px' }}>auto_awesome</span> Weave My Learning Roadmap</>
               )}
             </button>
           </form>

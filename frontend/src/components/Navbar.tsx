@@ -5,12 +5,14 @@ import { useTheme } from '../hooks/useTheme';
 import axiosClient from '../api/axiosClient';
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, deleteAccount } = useAuthStore();
   const navigate = useNavigate();
   const { isDark, toggle } = useTheme();
 
   // Settings modal state
   const [showSettings, setShowSettings] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deletingAcc, setDeletingAcc] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -292,6 +294,54 @@ export default function Navbar() {
                 </button>
               </div>
             </form>
+
+            {/* Danger Zone */}
+            <div className="mt-6 pt-4 border-t border-[var(--th-outline-variant)]">
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-xs text-red-500 hover:text-red-600 dark:hover:text-red-400 font-semibold flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>delete_forever</span>
+                  Delete My Account & All Data
+                </button>
+              ) : (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs animate-fade-in">
+                  <p className="font-semibold text-red-600 dark:text-red-400 mb-2">
+                    Are you sure? All your roadmaps, progress, and study notes will be permanently erased.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={deletingAcc}
+                      onClick={async () => {
+                        setDeletingAcc(true);
+                        try {
+                          await deleteAccount();
+                          setShowSettings(false);
+                          navigate('/login');
+                        } catch (err) {
+                          alert('Failed to delete account');
+                        } finally {
+                          setDeletingAcc(false);
+                        }
+                      }}
+                      className="px-3 py-1 rounded bg-red-600 text-white font-semibold text-xs cursor-pointer"
+                    >
+                      {deletingAcc ? 'Deleting...' : 'Yes, Delete Permanently'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(false)}
+                      className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-800 text-xs cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

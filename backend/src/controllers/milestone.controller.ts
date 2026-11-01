@@ -53,11 +53,27 @@ export const updateMilestone = async (
 
     const progress = await getRoadmapProgress(roadmap._id);
 
+    if (
+      progress.total > 0 &&
+      progress.completed === progress.total &&
+      roadmap.status === "active"
+    ) {
+      roadmap.status = "completed";
+      await roadmap.save();
+    } else if (
+      progress.completed < progress.total &&
+      roadmap.status === "completed"
+    ) {
+      roadmap.status = "active";
+      await roadmap.save();
+    }
+
     res.status(200).json({
       status: "success",
       data: {
         milestone,
         progress,
+        roadmap,
         streak: {
           currentStreak: req.user!.currentStreak,
           longestStreak: req.user!.longestStreak,

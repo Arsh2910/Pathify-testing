@@ -57,6 +57,17 @@ export async function getRoadmaps(
       "-createdAt",
     );
 
+    // Sync any 100% completed roadmaps that might still have active status
+    for (const r of roadmaps) {
+      if (r.status === "active") {
+        const progress = await getRoadmapProgress(r._id);
+        if (progress.total > 0 && progress.completed === progress.total) {
+          r.status = "completed";
+          await r.save();
+        }
+      }
+    }
+
     res.status(200).json({
       status: "success",
       results: roadmaps.length,
@@ -93,6 +104,22 @@ export async function getRoadmapDetails(
     }
 
     const progress = await getRoadmapProgress(roadmap._id);
+
+    // Sync status if all milestones are completed
+    if (
+      progress.total > 0 &&
+      progress.completed === progress.total &&
+      roadmap.status === "active"
+    ) {
+      roadmap.status = "completed";
+      await roadmap.save();
+    } else if (
+      progress.completed < progress.total &&
+      roadmap.status === "completed"
+    ) {
+      roadmap.status = "active";
+      await roadmap.save();
+    }
 
     res.status(200).json({
       status: "success",

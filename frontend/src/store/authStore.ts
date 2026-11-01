@@ -30,6 +30,7 @@ interface AuthState {
     password: string,
   ) => Promise<User>;
   checkAuth: () => Promise<User | null>;
+  deleteAccount: () => Promise<void>;
   logout: () => void;
   updateStreak: (streak: StreakUpdate) => void;
 }
@@ -121,6 +122,15 @@ const useAuthStore = create<AuthState>((set) => ({
       set({ token: null, user: null, isAuthenticated: false });
       return null;
     }
+  },
+
+  deleteAccount: async () => {
+    await axiosClient.delete("/auth/account");
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem("trailhead_token");
+    localStorage.removeItem("trailhead_user");
+    set({ token: null, user: null, isAuthenticated: false });
   },
 
   logout: () => {

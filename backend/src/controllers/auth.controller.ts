@@ -1,5 +1,8 @@
 import crypto from "crypto";
 import User from "../models/User.model";
+import Roadmap from "../models/Roadmap.model";
+import Phase from "../models/Phase.model";
+import Milestone from "../models/Milestone.model";
 import jwt from "jsonwebtoken";
 import AppError from "../utils/appError";
 import type { NextFunction, Request, Response } from "express";
@@ -318,6 +321,42 @@ export const updatePassword = async (
     await user.save();
 
     createSendToken(user, 200, res);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Permanently Delete Account & Associated Data
+export const deleteAccount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    if (!req.user) {
+      return next(new AppError("You are not logged in!", 401));
+    }
+
+    const userId = req.user._id;
+
+    // Cascade delete roadmaps, phases, and milestones
+    const roadmaps = await Roadmap.find({ user: userId }).select("_id");
+    const roadmapIds = roadmaps.map((r) => r._id);
+
+    const phases = await Phase.find({ roadmap: { $in: roadmapIds } }).select(
+      "_id",
+    );
+    const phaseIds = phases.map((p) => p._id);
+
+    await Milestone.deleteMany({ phase: { $in: phaseIds } });
+    await Phase.deleteMany({ roadmap: { $in: roadmapIds } });
+    await Roadmap.deleteMany({ user: userId });
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+      status: "success",
+      message: "Account and all associated roadmaps permanently deleted.",
+    });
   } catch (err) {
     next(err);
   }

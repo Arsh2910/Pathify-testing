@@ -133,17 +133,46 @@ const useRoadmapStore = create<RoadmapState>((set, get) => ({
 
   completeMilestone: async (milestoneId, isCompleted) => {
     const res = await axiosClient.patch(`/milestones/${milestoneId}`, { isCompleted });
-    const { milestone, progress, streak } = (res.data as { data: { milestone: Milestone; progress: Progress; streak: StreakInfo } }).data;
+    const { milestone, progress, streak, roadmap } = (res.data as {
+      data: {
+        milestone: Milestone;
+        progress: Progress;
+        streak: StreakInfo;
+        roadmap?: Roadmap;
+      };
+    }).data;
 
-    set((state) => ({
-      phases: state.phases.map((phase) => ({
-        ...phase,
-        milestones: phase.milestones.map((m) =>
-          m._id === milestoneId ? { ...m, isCompleted: milestone.isCompleted } : m
+    set((state) => {
+      const newStatus =
+        progress.total > 0 && progress.completed === progress.total
+          ? 'completed'
+          : 'active';
+
+      const updatedCurrentRoadmap = state.currentRoadmap
+        ? {
+            ...state.currentRoadmap,
+            status: (roadmap?.status || newStatus) as Roadmap['status'],
+          }
+        : null;
+
+      const targetId = state.currentRoadmap?._id;
+
+      return {
+        phases: state.phases.map((phase) => ({
+          ...phase,
+          milestones: phase.milestones.map((m) =>
+            m._id === milestoneId ? { ...m, isCompleted: milestone.isCompleted } : m
+          ),
+        })),
+        currentRoadmap: updatedCurrentRoadmap,
+        roadmaps: state.roadmaps.map((r) =>
+          targetId && r._id === targetId
+            ? { ...r, status: (roadmap?.status || newStatus) as Roadmap['status'] }
+            : r
         ),
-      })),
-      progress,
-    }));
+        progress,
+      };
+    });
 
     return { milestone, progress, streak };
   },

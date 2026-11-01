@@ -243,8 +243,29 @@ export default function RoadmapDetail() {
             </p>
           </div>
 
+          {/* 100% Completion Celebration Banner */}
+          {progressPercent === 100 && (
+            <div
+              className="p-5 rounded-xl border flex flex-col items-center text-center animate-fade-in"
+              style={{
+                background: 'linear-gradient(135deg, color-mix(in srgb, var(--th-primary-container) 15%, transparent), color-mix(in srgb, #f59e0b 15%, transparent))',
+                borderColor: 'var(--th-primary-container)',
+              }}
+            >
+              <span className="material-symbols-outlined text-amber-500 text-4xl mb-2 animate-bounce">
+                military_tech
+              </span>
+              <h3 style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: '18px', color: 'var(--th-on-surface)' }}>
+                Goal Mastered!
+              </h3>
+              <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '13px', color: 'var(--th-on-surface-variant)', marginTop: '4px' }}>
+                You completed every milestone in this roadmap. Outstanding perseverance!
+              </p>
+            </div>
+          )}
+
           {/* Next Task */}
-          {!isAbandoned && !isGenerating && (
+          {!isAbandoned && !isGenerating && progressPercent < 100 && (
             <NextTaskCard milestone={nextTask} onComplete={nextTask ? handleCompleteNextTask : null} />
           )}
         </aside>
