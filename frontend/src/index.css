@@ -15,27 +15,27 @@
    ================================================================ */
 :root {
   /* ── Surface / Background ── */
-  --th-background:                  #faf9f5;
-  --th-surface:                     #faf9f5;
-  --th-surface-dim:                 #dbdad6;
-  --th-surface-bright:              #faf9f5;
-  --th-surface-container-lowest:    #ffffff;
-  --th-surface-container-low:       #f4f4f0;
-  --th-surface-container:           #efeeea;
-  --th-surface-container-high:      #e9e8e4;
-  --th-surface-container-highest:   #e3e2df;
-  --th-surface-variant:             #e3e2df;
+  --th-background:                  #d8d2c7;
+  --th-surface:                     #e8e3da;
+  --th-surface-dim:                 #b8b0a3;
+  --th-surface-bright:              #f7f3eb;
+  --th-surface-container-lowest:    #faf7f0;
+  --th-surface-container-low:       #e5dfd4;
+  --th-surface-container:           #d8d0c4;
+  --th-surface-container-high:      #cbc3b7;
+  --th-surface-container-highest:   #beb6aa;
+  --th-surface-variant:             #b5ada1;
 
   /* ── On-Surface (text / icons) ── */
-  --th-on-surface:         #1b1c1a;
-  --th-on-background:      #1b1c1a;
-  --th-on-surface-variant: #414844;
+  --th-on-surface:         #101713;
+  --th-on-background:      #101713;
+  --th-on-surface-variant: #26342c;
   --th-inverse-surface:    #2f312e;
   --th-inverse-on-surface: #f2f1ed;
 
   /* ── Outlines / Borders ── */
-  --th-outline:         #717973;
-  --th-outline-variant: #c1c8c2;
+  --th-outline:         #46564c;
+  --th-outline-variant: #75867b;
 
   /* ── Primary (Forest Green) ── */
   --th-primary:                  #012d1d;
@@ -66,36 +66,36 @@
   --th-on-error-container: #93000a;
 
   /* ── Component-level semantic tokens (light) ── */
-  --th-card-bg:          #ffffff;
-  --th-card-border:      rgba(193, 200, 194, 0.55);
-  --th-card-shadow:      0 4px 16px rgba(0,0,0,0.06);
-  --th-card-hover-shadow:0 8px 24px rgba(0,0,0,0.10);
-  --th-nav-bg:           rgba(250, 249, 245, 0.92);
-  --th-nav-border:       rgba(193, 200, 194, 0.6);
-  --th-input-bg:         #faf9f5;
-  --th-input-border:     #c1c8c2;
+  --th-card-bg:          #f5f0e7;
+  --th-card-border:      #59675e;
+  --th-card-shadow:      0 7px 18px rgba(24, 42, 32, 0.14);
+  --th-card-hover-shadow:0 11px 26px rgba(24, 42, 32, 0.2);
+  --th-nav-bg:           rgba(244, 239, 230, 0.96);
+  --th-nav-border:       #59675e;
+  --th-input-bg:         #ede7dc;
+  --th-input-border:     #66736b;
   --th-input-focus:      #1b4332;
-  --th-input-focus-glow: rgba(27, 67, 50, 0.12);
-  --th-badge-bg:         rgba(174, 238, 203, 0.4);
-  --th-badge-border:     rgba(44, 105, 78, 0.3);
+  --th-input-focus-glow: rgba(27, 67, 50, 0.22);
+  --th-badge-bg:         rgba(132, 170, 149, 0.45);
+  --th-badge-border:     rgba(1, 45, 29, 0.45);
   --th-streak-color:     #2c694e;
-  --th-streak-bg:        rgba(174, 238, 203, 0.35);
-  --th-streak-border:    rgba(44, 105, 78, 0.25);
-  --th-muted:            #717973;
-  --th-next-task-border: rgba(27, 67, 50, 0.25);
-  --th-next-task-bg:     #ffffff;
-  --th-micro-step-bg:    rgba(44, 105, 78, 0.07);
-  --th-micro-step-border:rgba(44, 105, 78, 0.15);
+  --th-streak-bg:        rgba(132, 170, 149, 0.45);
+  --th-streak-border:    rgba(1, 45, 29, 0.4);
+  --th-muted:            #46564c;
+  --th-next-task-border: rgba(27, 67, 50, 0.5);
+  --th-next-task-bg:     #f5f0e7;
+  --th-micro-step-bg:    rgba(44, 105, 78, 0.15);
+  --th-micro-step-border:rgba(44, 105, 78, 0.35);
   --th-micro-step-color: #2c694e;
-  --th-why-now-bg:       rgba(21, 43, 28, 0.06);
-  --th-why-now-border:   rgba(21, 43, 28, 0.12);
+  --th-why-now-bg:       rgba(21, 43, 28, 0.12);
+  --th-why-now-border:   rgba(21, 43, 28, 0.3);
   --th-why-now-color:    #152b1c;
-  --th-trail-line:       rgba(193, 200, 194, 0.6);
-  --th-resource-bg:      rgba(27, 67, 50, 0.06);
+  --th-trail-line:       #75867b;
+  --th-resource-bg:      rgba(27, 67, 50, 0.14);
   --th-resource-color:   #1b4332;
-  --th-resource-border:  rgba(27, 67, 50, 0.2);
-  --th-toggle-bg:        #e9e8e4;
-  --th-toggle-icon:      #414844;
+  --th-resource-border:  rgba(27, 67, 50, 0.4);
+  --th-toggle-bg:        #d1cabe;
+  --th-toggle-icon:      #26342c;
 }
 
 .dark {
@@ -257,7 +257,7 @@
    BASE
    ================================================================ */
 *, *::before, *::after { box-sizing: border-box; }
-html { font-size: 16px; }
+html { font-size: 17px; }
 
 body {
   background-color: var(--th-background);
@@ -266,6 +266,17 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 /* ================================================================
@@ -332,7 +343,7 @@ body {
   background-color: var(--th-primary-container);
   color: var(--th-on-primary);
   font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.02em;
   border-radius: 0.5rem;
@@ -357,7 +368,7 @@ body {
   background: transparent;
   color: var(--th-on-surface);
   font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   border-radius: 0.5rem;
   padding: 0.65rem 1.25rem;
@@ -378,7 +389,7 @@ body {
   background: transparent;
   color: var(--th-error);
   font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   border-radius: 0.5rem;
   padding: 0.65rem 1.25rem;
@@ -423,7 +434,7 @@ body {
   padding: 0.65rem 1rem;
   color: var(--th-on-surface);
   font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 15px;
+  font-size: 16px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   outline: none;
 }
@@ -649,11 +660,137 @@ input.input-field.py-2 {
    ================================================================ */
 .page-bg {
   min-height: 100vh;
-  background: linear-gradient(160deg, var(--th-surface-container-low) 0%, var(--th-background) 60%);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(33, 78, 56, 0.1), transparent 34%),
+    linear-gradient(145deg, #d5cfc4 0%, #eee9df 52%, #d8d1c6 100%);
   transition: background 0.25s ease;
 }
 .dark .page-bg {
   background: radial-gradient(ellipse at 50% -20%, rgba(63,235,168,0.05) 0%, #000000 55%);
+}
+
+/* ================================================================
+   DESKTOP REPORT CAPTURE LAYOUTS
+   Keep important content large and close enough to survive scaling in reports.
+   ================================================================ */
+.auth-layout {
+  width: min(1120px, 100%);
+  display: grid;
+  grid-template-columns: minmax(310px, 0.9fr) minmax(500px, 1.1fr);
+  align-items: center;
+  gap: clamp(2rem, 4vw, 4.5rem);
+}
+
+.auth-intro {
+  text-align: left;
+  padding: clamp(1.8rem, 3vw, 3rem);
+  border: 1px solid var(--th-card-border);
+  border-radius: 1.25rem;
+  background: var(--th-surface-container-low);
+  box-shadow: var(--th-card-shadow);
+}
+
+.auth-intro > a { margin-bottom: 1rem; }
+
+.auth-feature-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.auth-feature {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.75rem;
+  background: var(--th-surface-container);
+  border: 1px solid var(--th-outline-variant);
+  color: var(--th-on-surface);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.auth-form-card { padding: clamp(1.5rem, 2.5vw, 2rem) !important; }
+.auth-form-card .relative.my-6 { margin-top: 1rem !important; margin-bottom: 1rem !important; }
+.auth-form-card .mt-6 { margin-top: 1rem !important; }
+
+.dashboard-shell,
+.roadmap-detail-shell {
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  padding: 5.25rem clamp(1.25rem, 3vw, 2.75rem) 2.5rem;
+}
+
+.dashboard-hero { margin-bottom: 1.25rem; }
+.dashboard-toolbar { margin-bottom: 1rem; }
+.roadmap-grid { gap: 1.25rem; }
+
+.roadmap-card {
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.intake-shell {
+  width: min(1180px, 100%);
+  display: grid;
+  grid-template-columns: minmax(320px, 0.78fr) minmax(580px, 1.22fr);
+  gap: 1.5rem 2rem;
+  align-items: start;
+}
+
+.intake-header {
+  grid-column: 1 / -1;
+  margin-bottom: 0.25rem;
+}
+
+.intake-blueprints {
+  position: sticky;
+  top: 5.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--th-card-border);
+  border-radius: 1rem;
+  background: var(--th-surface-container-low);
+}
+
+.intake-blueprints > div:last-child { grid-template-columns: 1fr; }
+.intake-form-card { padding: 1.3rem 1.6rem !important; }
+.intake-form-card form { gap: 0.8rem; }
+.intake-form-card .mt-3 { margin-top: 0.5rem !important; }
+.intake-form-card .mt-4 { margin-top: 0.6rem !important; }
+.intake-form-card label.p-3 { padding: 0.55rem 0.75rem !important; }
+.roadmap-detail-header { margin-bottom: 1.25rem; }
+
+.roadmap-detail-grid {
+  gap: 1.25rem;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.phase-card > button { padding: 1rem 1.15rem; }
+
+@media (min-width: 1024px) {
+  .roadmap-detail-grid > aside { grid-column: span 3 / span 3; }
+  .roadmap-detail-grid > main { grid-column: span 9 / span 9; }
+}
+
+@media (max-width: 900px) {
+  .auth-layout,
+  .intake-shell { grid-template-columns: 1fr; }
+  .auth-intro { text-align: center; }
+  .auth-feature-list { grid-template-columns: repeat(3, 1fr); }
+  .intake-header { grid-column: 1; }
+  .intake-blueprints { position: static; }
+  .intake-blueprints > div:last-child { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .auth-feature-list { grid-template-columns: 1fr; }
+  .auth-intro { padding: 1.25rem; }
+  .dashboard-shell,
+  .roadmap-detail-shell { padding: 5rem 1rem 2rem; }
+  .intake-blueprints > div:last-child { grid-template-columns: 1fr; }
 }
 
 /* ================================================================

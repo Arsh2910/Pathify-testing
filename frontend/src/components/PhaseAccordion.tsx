@@ -51,7 +51,7 @@ export default function PhaseAccordion({ phase, roadmapId, phaseIndex }: { phase
 
   return (
     <div
-      className="rounded-xl overflow-hidden mb-3"
+      className="phase-card rounded-xl overflow-hidden mb-3"
       style={{
         background: 'var(--th-card-bg)',
         border: '1px solid var(--th-card-border)',

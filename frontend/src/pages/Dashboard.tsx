@@ -116,10 +116,10 @@ export default function Dashboard() {
   const streak = user?.currentStreak || 0;
 
   return (
-    <div className="page-bg min-h-screen pt-24 pb-16 px-4 md:px-12" style={{ maxWidth: '1280px', margin: '0 auto' }}>
+    <div className="page-bg min-h-screen dashboard-shell">
 
       {/* Hero */}
-      <section className="mb-10 animate-fade-in">
+      <section className="dashboard-hero animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
             <p style={{ fontFamily: 'Hanken Grotesk', fontSize: '12px', fontWeight: 700, color: 'var(--th-primary-container)', letterSpacing: '0.1em', marginBottom: '6px' }}>
@@ -155,7 +155,7 @@ export default function Dashboard() {
       </section>
 
       {/* CTA & Controls Toolbar */}
-      <section className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <section className="dashboard-toolbar flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Link to="/new" className="btn-primary inline-flex items-center gap-2 py-3 px-6 text-base">
           <span className="material-symbols-outlined icon-fill" style={{ fontSize: '20px' }}>add_circle</span>
           New Learning Trail
@@ -186,7 +186,7 @@ export default function Dashboard() {
       </section>
 
       {/* Status Filter Tabs & Sorter */}
-      <section className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <section className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
           {(['all', 'active', 'completed', 'abandoned'] as const).map((st) => (
             <button
@@ -282,7 +282,7 @@ export default function Dashboard() {
         )}
 
         {!loading && filteredRoadmaps.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="roadmap-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {filteredRoadmaps.map((roadmap, index) => (
               <RoadmapCard
                 key={roadmap._id}
@@ -375,7 +375,7 @@ function RoadmapCard({
 
   return (
     <div
-      className="card group cursor-pointer animate-fade-in"
+      className="card roadmap-card group cursor-pointer animate-fade-in"
       style={{
         animationDelay: `${index * 0.05}s`,
         padding: '1.5rem',

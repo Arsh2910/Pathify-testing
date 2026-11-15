@@ -315,10 +315,10 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
   };
 
   return (
-    <div className="page-bg min-h-screen flex items-center justify-center px-4 pt-16">
-      <div className="w-full max-w-md animate-fade-in py-8">
+    <div className="page-bg min-h-screen flex items-center justify-center px-5 pt-16 pb-4">
+      <div className="auth-layout animate-fade-in">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="auth-intro">
           <Link to="/" className="inline-flex items-center gap-2 mb-3">
             <span
               className="material-symbols-outlined icon-fill"
@@ -349,14 +349,19 @@ export default function AuthPage({ initialTab = "login" }: AuthPageProps) {
               ? "Account Recovery & Security"
               : "Weave your path to mastery. One milestone at a time."}
           </p>
+          <div className="auth-feature-list">
+            <div className="auth-feature"><span className="material-symbols-outlined icon-fill">route</span>Personalized learning paths</div>
+            <div className="auth-feature"><span className="material-symbols-outlined icon-fill">task_alt</span>Clear milestone guidance</div>
+            <div className="auth-feature"><span className="material-symbols-outlined icon-fill">insights</span>Visible progress tracking</div>
+          </div>
         </div>
 
         {/* Card */}
-        <div className="card-flat" style={{ padding: "2rem" }}>
+        <div className="card-flat auth-form-card">
           {/* Tabs for Login / Register */}
           {(tab === "login" || tab === "register") && (
             <div
-              className="flex rounded-lg p-1 mb-7"
+              className="flex rounded-lg p-1 mb-5"
               style={{
                 background: "var(--th-surface-container)",
                 border: "1px solid var(--th-outline-variant)",

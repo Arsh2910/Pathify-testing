@@ -121,11 +121,11 @@ export default function IntakeForm() {
   };
 
   return (
-    <div className="page-bg min-h-screen px-4 pt-24 pb-16 flex items-start justify-center">
-      <div className="w-full max-w-2xl animate-fade-in">
+    <div className="page-bg min-h-screen px-5 pt-16 pb-6 flex items-start justify-center">
+      <div className="intake-shell animate-fade-in">
 
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="intake-header text-center">
           <div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4"
             style={{
@@ -154,7 +154,7 @@ export default function IntakeForm() {
         </div>
 
         {/* Curated Trail Blueprints */}
-        <div className="mb-6">
+        <div className="intake-blueprints">
           <div className="flex items-center justify-between mb-3 px-1">
             <span style={{ fontFamily: 'Hanken Grotesk', fontSize: '11px', fontWeight: 700, color: 'var(--th-primary-container)', letterSpacing: '0.08em' }}>
               POPULAR TRAIL BLUEPRINTS
@@ -169,7 +169,7 @@ export default function IntakeForm() {
                 <div
                   key={b.id}
                   onClick={() => handleSelectBlueprint(b)}
-                  className="p-3 rounded-xl border cursor-pointer transition hover:scale-[1.01]"
+                  className="p-2.5 rounded-xl border cursor-pointer transition hover:scale-[1.01]"
                   style={{
                     background: isSelected
                       ? 'color-mix(in srgb, var(--th-primary-container) 12%, var(--th-surface-container-low))'
@@ -216,7 +216,7 @@ export default function IntakeForm() {
         </div>
 
         {/* Form Card */}
-        <div className="card-flat" style={{ padding: '2.5rem' }}>
+        <div className="card-flat intake-form-card">
           {error && (
             <div
               className="flex items-center gap-2 p-3 rounded-lg mb-6"
@@ -359,7 +359,7 @@ export default function IntakeForm() {
             </div>
 
             {/* Submit */}
-            <button type="submit" className="btn-primary w-full py-4 text-base" disabled={loading}>
+            <button type="submit" className="btn-primary w-full py-3 text-base" disabled={loading}>
               {loading ? (
                 <><span className="material-symbols-outlined animate-spin-glow" style={{ fontSize: '20px' }}>refresh</span> Weaving your roadmap...</>
               ) : (

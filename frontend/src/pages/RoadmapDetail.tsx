@@ -140,10 +140,10 @@ export default function RoadmapDetail() {
   const isGenerating = currentRoadmap.status === 'generating';
 
   return (
-    <div className="page-bg min-h-screen pt-24 pb-16 px-4 md:px-12 animate-fade-in" style={{ maxWidth: '1280px', margin: '0 auto' }}>
+    <div className="page-bg min-h-screen roadmap-detail-shell animate-fade-in">
 
       {/* Back */}
-      <Link to="/" className="inline-flex items-center gap-2 mb-8 transition-colors duration-200"
+      <Link to="/" className="inline-flex items-center gap-2 mb-4 transition-colors duration-200"
         style={{ color: 'var(--th-on-surface-variant)', textDecoration: 'none', fontFamily: 'Hanken Grotesk', fontSize: '13px', fontWeight: 600, letterSpacing: '0.04em' }}
         onMouseEnter={e => e.currentTarget.style.color = 'var(--th-primary-container)'}
         onMouseLeave={e => e.currentTarget.style.color = 'var(--th-on-surface-variant)'}
@@ -153,7 +153,7 @@ export default function RoadmapDetail() {
       </Link>
 
       {/* Header */}
-      <header className="mb-10">
+      <header className="roadmap-detail-header">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
@@ -238,7 +238,7 @@ export default function RoadmapDetail() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="roadmap-detail-grid grid grid-cols-1 lg:grid-cols-12">
 
         {/* Sidebar */}
         <aside className="lg:col-span-4 flex flex-col gap-5">
